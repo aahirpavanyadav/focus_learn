@@ -41,3 +41,4 @@ external library, or API key is required.
 The My Notes iframe now has explicit full-width and tall responsive dimensions in both
 inline styles and the stylesheet, avoiding the browser's default small iframe dimensions.
 The fallback link is also available directly beneath the embedded workspace.
+\n\n### Editing courses and lessons\n- Use **Edit** beside any course to change its name and description.\n- Use **Edit** beside any lesson to change its title, module, and YouTube video URL.\n- Moving a lesson to an existing module with the same name places it there; otherwise the current module is renamed.\n- Completion status and other lesson progress are preserved when editing.\n

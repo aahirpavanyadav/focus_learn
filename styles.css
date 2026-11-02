@@ -73,3 +73,4 @@ button:disabled{opacity:.55;cursor:not-allowed}
  .notes-embed-shell{height:72vh!important;min-height:560px!important;max-height:none!important}
  .notes-embed-shell iframe{min-height:560px!important}
 }
+\n/* Edit actions */\n.mini-button.edit{color:#b9adff;border-color:#494260;background:#262333}\n.mini-button.edit:hover{background:#332e45;border-color:#7568aa}\n.lesson-row{flex-wrap:wrap}\n@media(max-width:520px){.lesson-row{gap:7px}.lesson-row-info{flex-basis:calc(100% - 90px)}.lesson-row .mini-button{padding:7px 8px}}\n

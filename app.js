@@ -90,8 +90,8 @@
     $("#courseCountLabel").textContent=`${state.courses.length} course${state.courses.length===1?"":"s"}`;
     $("#managementEmpty").hidden=state.courses.length>0;
     $("#managementCourses").innerHTML=state.courses.map(c=>{
-      const s=stats(c),mods=(c.modules||[]).map(m=>`<div class="module-block"><div class="module-title">${esc(m.name)}</div>${m.lessons.map(l=>`<div class="lesson-row"><img class="lesson-thumb" src="${thumb(l.videoId)}" alt="" loading="lazy"><div class="lesson-row-info"><strong>${esc(l.title)}</strong><small>${l.completed?"Completed":"Not completed"}</small></div>${l.completed?'<span class="lesson-status">✓ Done</span>':""}<button type="button" class="mini-button" data-play="${c.id}|${l.id}">Open</button><button type="button" class="mini-button delete" data-delete-lesson="${c.id}|${m.id}|${l.id}">Remove</button></div>`).join("")}</div>`).join("");
-      return `<article class="panel management-course"><div class="management-course-head"><div><h3>${esc(c.name)}</h3><p>${s.total} lessons · ${s.pct}% complete</p></div><div class="course-actions"><button type="button" class="mini-button" data-open-course="${c.id}">Study course →</button><button type="button" class="mini-button delete" data-delete-course="${c.id}">Delete</button></div></div>${mods||'<p class="muted small" style="margin:15px 0 0">No lessons yet. Add one above.</p>'}</article>`;
+      const s=stats(c),mods=(c.modules||[]).map(m=>`<div class="module-block"><div class="module-title">${esc(m.name)}</div>${m.lessons.map(l=>`<div class="lesson-row"><img class="lesson-thumb" src="${thumb(l.videoId)}" alt="" loading="lazy"><div class="lesson-row-info"><strong>${esc(l.title)}</strong><small>${l.completed?"Completed":"Not completed"}</small></div>${l.completed?'<span class="lesson-status">✓ Done</span>':""}<button type="button" class="mini-button" data-play="${c.id}|${l.id}">Open</button><button type="button" class="mini-button edit" data-edit-lesson="${c.id}|${m.id}|${l.id}">Edit</button><button type="button" class="mini-button delete" data-delete-lesson="${c.id}|${m.id}|${l.id}">Remove</button></div>`).join("")}</div>`).join("");
+      return `<article class="panel management-course"><div class="management-course-head"><div><h3>${esc(c.name)}</h3><p>${s.total} lessons · ${s.pct}% complete</p></div><div class="course-actions"><button type="button" class="mini-button" data-open-course="${c.id}">Study course →</button><button type="button" class="mini-button edit" data-edit-course="${c.id}">Edit</button><button type="button" class="mini-button delete" data-delete-course="${c.id}">Delete</button></div></div>${mods||'<p class="muted small" style="margin:15px 0 0">No lessons yet. Add one above.</p>'}</article>`;
     }).join("");
   }
   function renderAnalytics(){
@@ -157,6 +157,52 @@
     const op=e.target.closest("[data-open-course]");if(op){openCourse(op.dataset.openCourse);return;}
     const play=e.target.closest("[data-play]");if(play){const [c,l]=play.dataset.play.split("|");openCourse(c,l);return;}
     const lesson=e.target.closest("[data-lesson]");if(lesson){openLesson(lesson.dataset.lesson);return;}
+    const editLesson=e.target.closest("[data-edit-lesson]");
+    if(editLesson){
+      const [cid,mid,lid]=editLesson.dataset.editLesson.split("|");
+      const c=state.courses.find(x=>x.id===cid),m=c?.modules.find(x=>x.id===mid),l=m?.lessons.find(x=>x.id===lid);
+      if(!c||!m||!l)return;
+      const title=prompt("Lesson title:",l.title||"");
+      if(title===null)return;
+      const cleanTitle=title.trim();
+      if(!cleanTitle){notify("Lesson title cannot be empty.");return;}
+      const moduleName=prompt("Module name:",m.name);
+      if(moduleName===null)return;
+      const cleanModule=moduleName.trim();
+      if(!cleanModule){notify("Module name cannot be empty.");return;}
+      const videoUrl=prompt("YouTube video URL:",`https://www.youtube.com/watch?v=${l.videoId}`);
+      if(videoUrl===null)return;
+      const newVideoId=videoId(videoUrl);
+      if(!newVideoId){notify("That is not a valid YouTube video URL.");return;}
+      let targetModule=c.modules.find(x=>x.id!==m.id&&x.name.toLowerCase()===cleanModule.toLowerCase());
+      if(!targetModule&&m.name.toLowerCase()!==cleanModule.toLowerCase()){
+        m.name=cleanModule;
+      } else if(targetModule){
+        m.lessons=m.lessons.filter(x=>x.id!==lid);
+        targetModule.lessons.push(l);
+        c.modules=c.modules.filter(x=>x.lessons.length);
+      }
+      l.title=cleanTitle;l.videoId=newVideoId;
+      save();
+      if(currentCourseId===cid&&currentLessonId===lid)openLesson(lid);
+      notify("Lesson updated.");
+      return;
+    }
+    const editCourse=e.target.closest("[data-edit-course]");
+    if(editCourse){
+      const c=state.courses.find(x=>x.id===editCourse.dataset.editCourse);
+      if(!c)return;
+      const name=prompt("Course name:",c.name);
+      if(name===null)return;
+      const cleanName=name.trim();
+      if(!cleanName){notify("Course name cannot be empty.");return;}
+      const description=prompt("Course description:",c.description||"");
+      if(description===null)return;
+      c.name=cleanName;c.description=description.trim();
+      save();
+      notify("Course updated.");
+      return;
+    }
     const dl=e.target.closest("[data-delete-lesson]");if(dl){const [cid,mid,lid]=dl.dataset.deleteLesson.split("|");const c=state.courses.find(x=>x.id===cid),m=c?.modules.find(x=>x.id===mid);if(m&&confirm("Remove this lesson?")){m.lessons=m.lessons.filter(x=>x.id!==lid);c.modules=c.modules.filter(x=>x.lessons.length);if(c.lastWatched===lid)c.lastWatched=null;save();notify("Lesson removed.");}return;}
     const del=e.target.closest("[data-delete-course]");if(del&&confirm("Delete this course and all its lessons?")){state.courses=state.courses.filter(c=>c.id!==del.dataset.deleteCourse);save();notify("Course deleted.");}
   });
