@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#101114">
+  <title>FocusLearn — Your learning space</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="#" aria-label="FocusLearn home">
+        <span class="brand-mark">f</span><span>focus<span class="brand-light">learn</span></span>
+      </a>
+      <div class="side-label">WORKSPACE</div>
+      <nav class="nav">
+        <button class="nav-item active" data-page="dashboard"><span class="nav-icon">▦</span>Dashboard</button>
+        <button class="nav-item" data-page="courses"><span class="nav-icon">▤</span>My courses</button>
+        <button class="nav-item" data-page="settings"><span class="nav-icon">⚙</span>Settings</button>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="focus-card"><div class="focus-icon">◷</div><strong>Make it count.</strong><p>Small sessions. Real progress.</p></div>
+        <div class="profile"><div class="avatar">K</div><div><strong>My learning space</strong><small>Personal workspace</small></div></div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <button class="mobile-menu icon-button" id="menuToggle" aria-label="Toggle menu">☰</button>
+        <div class="breadcrumb">Workspace <span>/</span> <strong id="pageCrumb">Dashboard</strong></div>
+        <div class="top-actions"><span class="local-badge"><i></i> Saved on this device</span></div>
+      </header>
+
+      <section class="page active" id="page-dashboard">
+        <div class="welcome-row">
+          <div><p class="eyebrow">YOUR LEARNING, AT A GLANCE</p><h1>Keep your momentum.</h1><p class="muted">Pick up where you left off or make room for something new.</p></div>
+          <button class="primary-button" data-go="courses">＋ Add a course</button>
+        </div>
+        <div class="stats-grid">
+          <article class="stat-card"><span class="stat-icon purple">▤</span><div><small>Courses</small><strong id="statCourses">0</strong></div></article>
+          <article class="stat-card"><span class="stat-icon green">✓</span><div><small>Lessons completed</small><strong id="statCompleted">0</strong></div></article>
+          <article class="stat-card"><span class="stat-icon amber">◷</span><div><small>Overall progress</small><strong id="statProgress">0%</strong></div></article>
+        </div>
+        <div class="section-heading"><div><p class="eyebrow">YOUR LIBRARY</p><h2>Continue learning</h2></div><button class="text-button" data-go="courses">Manage courses <span>→</span></button></div>
+        <div class="course-grid" id="dashboardCourses"></div>
+        <div class="empty-state" id="dashboardEmpty"><div class="empty-art">▤</div><h3>Your learning space is ready</h3><p>Add a course and turn your YouTube watchlist into a structured learning path.</p><button class="primary-button" data-go="courses">＋ Create your first course</button></div>
+      </section>
+
+      <section class="page" id="page-courses">
+        <div class="page-heading"><div><p class="eyebrow">BUILD YOUR LIBRARY</p><h1>Course management</h1><p class="muted">Organize videos into courses, modules, and lessons.</p></div></div>
+        <div class="management-layout">
+          <div class="panel create-panel">
+            <div class="panel-title"><div><span class="step">01</span><h3>Create a course</h3></div></div>
+            <form id="courseForm"><label for="courseName">Course name</label><input id="courseName" maxlength="70" placeholder="e.g. JavaScript Mastery" required><label for="courseDescription">Description <span class="optional">Optional</span></label><textarea id="courseDescription" rows="3" maxlength="180" placeholder="What will you learn?"></textarea><button class="primary-button full" type="submit">Create course <span>→</span></button></form>
+          </div>
+          <div class="panel add-panel">
+            <div class="panel-title"><div><span class="step">02</span><h3>Add a lesson</h3></div></div>
+            <form id="lessonForm">
+              <label for="lessonCourse">Add to course</label><select id="lessonCourse" required><option value="">Choose a course</option></select>
+              <label for="moduleName">Module name</label><input id="moduleName" maxlength="70" placeholder="e.g. JavaScript fundamentals" required>
+              <label for="videoUrl">YouTube video URL</label><div class="url-input"><input id="videoUrl" type="url" placeholder="https://www.youtube.com/watch?v=..." required><span>YT</span></div>
+              <div class="video-preview" id="videoPreview"><div class="preview-placeholder">▶</div><div><strong>Video preview</strong><small>Paste a YouTube URL to preview its thumbnail.</small></div></div>
+              <button class="primary-button full" type="submit">Add lesson <span>＋</span></button>
+            </form>
+          </div>
+        </div>
+        <div class="section-heading list-heading"><div><p class="eyebrow">STRUCTURE</p><h2>All courses</h2></div><span class="muted small" id="courseCountLabel">0 courses</span></div>
+        <div id="managementCourses" class="management-courses"></div>
+        <div class="empty-state compact" id="managementEmpty"><div class="empty-art">＋</div><h3>No courses yet</h3><p>Create a course to start organizing your lessons.</p></div>
+      </section>
+
+      <section class="page" id="page-player">
+        <div class="player-top"><button class="back-button" id="backToCourses">← Back to courses</button><span class="muted small" id="playerCourseLabel"></span></div>
+        <div class="player-layout">
+          <div class="player-main">
+            <div class="video-frame" id="videoFrame"><div class="player-placeholder">Select a lesson to begin</div></div>
+            <div class="lesson-heading"><div><p class="eyebrow" id="playerModuleLabel">NOW LEARNING</p><h1 id="playerLessonTitle">Choose a lesson</h1><p class="muted" id="playerLessonMeta">Your progress is saved automatically on this device.</p></div><button class="complete-button" id="completeButton">✓ Mark complete</button></div>
+            <div class="panel lesson-note"><h3>Stay focused</h3><p>Keep this space for the lesson. When you're finished, mark it complete and move to the next one.</p></div>
+          </div>
+          <aside class="panel curriculum"><div class="curriculum-header"><div><p class="eyebrow">COURSE CONTENT</p><h3 id="curriculumTitle">Curriculum</h3></div><span class="progress-number" id="curriculumProgress">0%</span></div><div class="progress-track"><span id="curriculumBar"></span></div><div id="curriculumList" class="curriculum-list"></div></aside>
+        </div>
+      </section>
+
+      <section class="page" id="page-settings">
+        <div class="page-heading"><p class="eyebrow">YOUR DATA, YOUR CONTROL</p><h1>Settings</h1><p class="muted">Your library stays in this browser. Export a backup whenever you need it.</p></div>
+        <div class="settings-grid">
+          <div class="panel settings-card"><div class="settings-symbol purple">⇧</div><h3>Export your library</h3><p>Download all courses, lessons, and completion progress as a JSON backup.</p><button class="primary-button" id="exportButton">Download backup <span>↓</span></button></div>
+          <div class="panel settings-card"><div class="settings-symbol green">⇩</div><h3>Import a backup</h3><p>Restore a previously exported FocusLearn JSON file. This replaces the current library.</p><label class="secondary-button file-button" for="importFile">Choose JSON file</label><input type="file" id="importFile" accept=".json,application/json" hidden></div>
+          <div class="panel settings-card danger-card"><div class="settings-symbol red">⌫</div><h3>Reset your library</h3><p>Permanently clear all courses and progress stored in this browser.</p><button class="danger-button" id="resetButton">Delete all data</button></div>
+        </div>
+        <div class="privacy-note"><span>🔒</span><div><strong>Private by design</strong><p>FocusLearn has no account, backend, or analytics. Your course data is stored locally using your browser's local storage. YouTube playback is embedded from YouTube.</p></div></div>
+      </section>
+      <footer class="footer">FOCUSLEARN <span>·</span> A quieter way to learn.</footer>
+    </main>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="app.js"></script>
+</body>
+</html>
