@@ -17,6 +17,8 @@
       <nav class="nav">
         <button class="nav-item active" data-page="dashboard"><span class="nav-icon">▦</span>Dashboard</button>
         <button class="nav-item" data-page="courses"><span class="nav-icon">▤</span>My courses</button>
+        <button class="nav-item" data-page="analytics"><span class="nav-icon">◷</span>Analytics</button>
+        <button class="nav-item" data-page="notes"><span class="nav-icon">✎</span>My Notes</button>
         <button class="nav-item" data-page="settings"><span class="nav-icon">⚙</span>Settings</button>
       </nav>
       <div class="sidebar-bottom">
@@ -47,6 +49,36 @@
         <div class="empty-state" id="dashboardEmpty"><div class="empty-art">▤</div><h3>Your learning space is ready</h3><p>Add a course and turn your YouTube watchlist into a structured learning path.</p><button class="primary-button" data-go="courses">＋ Create your first course</button></div>
       </section>
 
+      <section class="page" id="page-analytics">
+        <div class="page-heading">
+          <p class="eyebrow">MEASURE WHAT YOU LEARN</p>
+          <h1>Learning analytics</h1>
+          <p class="muted">Your study activity is measured from FocusLearn's study timer, not guessed from video playback.</p>
+        </div>
+        <div class="stats-grid analytics-stats">
+          <article class="stat-card"><span class="stat-icon purple">◷</span><div><small>Total study time</small><strong id="analyticsTotalTime">0m</strong></div></article>
+          <article class="stat-card"><span class="stat-icon green">▦</span><div><small>Active days</small><strong id="analyticsActiveDays">0</strong></div></article>
+          <article class="stat-card"><span class="stat-icon amber">⚡</span><div><small>Current streak</small><strong id="analyticsStreak">0 days</strong></div></article>
+          <article class="stat-card"><span class="stat-icon purple">✓</span><div><small>Lessons completed</small><strong id="analyticsLessons">0</strong></div></article>
+        </div>
+        <div class="analytics-grid">
+          <article class="panel analytics-panel">
+            <div class="analytics-panel-head"><div><p class="eyebrow">CONSISTENCY</p><h2>Last 7 days</h2></div><span class="muted small" id="weeklyTotal">0 min total</span></div>
+            <div class="weekly-chart" id="weeklyChart" aria-label="Study time over the last seven days"></div>
+            <div class="chart-legend"><span><i></i> Focus time recorded by the study timer</span></div>
+          </article>
+          <article class="panel analytics-panel">
+            <p class="eyebrow">YOUR LIBRARY</p><h2>Course progress</h2>
+            <div id="analyticsCourses" class="analytics-course-list"></div>
+          </article>
+        </div>
+        <article class="panel sessions-panel">
+          <div class="analytics-panel-head"><div><p class="eyebrow">RECENT ACTIVITY</p><h2>Study sessions</h2></div><span class="muted small">Stored on this device</span></div>
+          <div id="recentSessions" class="recent-sessions"></div>
+          <p class="analytics-footnote">Time is counted only while a study session is running and this tab is visible. YouTube's embedded player does not expose reliable watch-time data to this static app.</p>
+        </article>
+      </section>
+
       <section class="page" id="page-courses">
         <div class="page-heading"><div><p class="eyebrow">BUILD YOUR LIBRARY</p><h1>Course management</h1><p class="muted">Organize videos into courses, modules, and lessons.</p></div></div>
         <div class="management-layout">
@@ -75,11 +107,22 @@
         <div class="player-layout">
           <div class="player-main">
             <div class="video-frame" id="videoFrame"><div class="player-placeholder">Select a lesson to begin</div></div>
-            <div class="lesson-heading"><div><p class="eyebrow" id="playerModuleLabel">NOW LEARNING</p><h1 id="playerLessonTitle">Choose a lesson</h1><p class="muted" id="playerLessonMeta">Your progress is saved automatically on this device.</p></div><button class="complete-button" id="completeButton">✓ Mark complete</button></div>
+            <div class="lesson-heading"><div><p class="eyebrow" id="playerModuleLabel">NOW LEARNING</p><h1 id="playerLessonTitle">Choose a lesson</h1><p class="muted" id="playerLessonMeta">Your progress is saved automatically on this device.</p></div><div class="player-actions"><div class="study-timer"><span class="timer-dot" id="timerDot"></span><strong id="studyTimerDisplay">00:00:00</strong><button class="timer-button" id="studyTimerToggle" type="button">Start study</button></div><button class="complete-button" id="completeButton">✓ Mark complete</button></div></div>
             <div class="panel lesson-note"><h3>Stay focused</h3><p>Keep this space for the lesson. When you're finished, mark it complete and move to the next one.</p></div>
           </div>
           <aside class="panel curriculum"><div class="curriculum-header"><div><p class="eyebrow">COURSE CONTENT</p><h3 id="curriculumTitle">Curriculum</h3></div><span class="progress-number" id="curriculumProgress">0%</span></div><div class="progress-track"><span id="curriculumBar"></span></div><div id="curriculumList" class="curriculum-list"></div></aside>
         </div>
+      </section>
+
+      <section class="page notes-page" id="page-notes">
+        <div class="notes-toolbar">
+          <div><p class="eyebrow">YOUR WRITING WORKSPACE</p><h1>My Notes</h1><p class="muted">Your existing notes app, opened inside FocusLearn.</p></div>
+          <a class="primary-button notes-open-link" href="https://aahirpavanyadav.github.io/My-notes/" target="_blank" rel="noopener noreferrer">Open in new tab ↗</a>
+        </div>
+        <div class="notes-embed-shell">
+          <iframe id="notesFrame" src="https://aahirpavanyadav.github.io/My-notes/" title="My Notes workspace" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+        </div>
+        <p class="notes-disclaimer">Notes are stored by the My Notes website in its own browser storage. FocusLearn cannot directly read, edit, or back up that separate data. Use My Notes' own Export option to back it up. If the embedded view is blocked by the host, use “Open in new tab”.</p>
       </section>
 
       <section class="page" id="page-settings">
@@ -89,7 +132,7 @@
           <div class="panel settings-card"><div class="settings-symbol green">⇩</div><h3>Import a backup</h3><p>Restore a previously exported FocusLearn JSON file. This replaces the current library.</p><label class="secondary-button file-button" for="importFile">Choose JSON file</label><input type="file" id="importFile" accept=".json,application/json" hidden></div>
           <div class="panel settings-card danger-card"><div class="settings-symbol red">⌫</div><h3>Reset your library</h3><p>Permanently clear all courses and progress stored in this browser.</p><button class="danger-button" id="resetButton">Delete all data</button></div>
         </div>
-        <div class="privacy-note"><span>🔒</span><div><strong>Private by design</strong><p>FocusLearn has no account, backend, or analytics. Your course data is stored locally using your browser's local storage. YouTube playback is embedded from YouTube.</p></div></div>
+        <div class="privacy-note"><span>🔒</span><div><strong>Private by design</strong><p>FocusLearn has no account or backend. Courses, progress, and study sessions are stored locally in this browser. My Notes is a separate website with separate browser storage. YouTube playback is embedded from YouTube.</p></div></div>
       </section>
       <footer class="footer">FOCUSLEARN <span>·</span> A quieter way to learn.</footer>
     </main>
