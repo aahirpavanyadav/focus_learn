@@ -35,3 +35,9 @@ external library, or API key is required.
 - YouTube thumbnails and videos need internet access; some videos disable embedding.
 - Static-only code cannot securely provide real multi-user accounts, cross-device sync,
   or server-enforced admin/user permissions.
+
+
+## Notes page layout fix
+The My Notes iframe now has explicit full-width and tall responsive dimensions in both
+inline styles and the stylesheet, avoiding the browser's default small iframe dimensions.
+The fallback link is also available directly beneath the embedded workspace.
