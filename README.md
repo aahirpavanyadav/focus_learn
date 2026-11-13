@@ -1,4 +1,4 @@
-# FocusLearn — Pictures, Notes & PDF Library, Analytics + Courses
+# FocusLearn — Courses, Playlists, Pictures, Notes & PDF Library, Analytics
 
 FocusLearn is a distraction-free, privacy-first personal learning space built as a 100% static web application.
 
@@ -32,13 +32,22 @@ Store, edit, save, view, and delete both PDF documents and created study notes d
 - **Fullscreen Lightbox**: View full-resolution images with zoom toggle and details sidebar.
 - **Download & Delete**: Save picture files locally or remove them with confirmation.
 
-### 3. Courses & Lesson Management
-- Responsive dashboard, course management, learning player, and settings
-- Group lessons into courses and modules
-- Accept YouTube watch, youtu.be, shorts, live, and embed URLs with thumbnail previews
-- Privacy-enhanced embedded YouTube playback (`youtube-nocookie.com`)
-- Mark lessons complete/incomplete and remember last watched lesson
-- Edit course names, descriptions, and lesson titles/modules/URLs
+### 3. Courses, Playlists & Lesson Management
+- Group lessons and playlists into customizable courses and organized modules.
+- **YouTube Playlist Support**:
+  - Add full YouTube playlists by playlist URL (`youtube.com/playlist?list=...`) or playlist ID (`PL...`, `UU...`, `FL...`, `RD...`, `OLAK...`).
+  - Interactive playlist playback in the distraction-free player via YouTube's native `videoseries` player with playlist drawer, track index, and auto-progression.
+  - **Batch Video Importer**: Paste a multiline list of YouTube video URLs extracted from a playlist or syllabus to add multiple lessons in one click.
+- **Edit, Save & Delete Content**:
+  - Modal editor for both playlists and individual video lessons: update Title, Module assignment, and YouTube URL/ID with live validation and preview.
+  - Delete individual videos or entire playlists from any module with a single click and confirmation.
+  - Reorder, reorganize, or reassign lessons to different modules at any time.
+- **Video & Embed Support**:
+  - Accept YouTube watch, youtu.be, shorts, live, playlist (`videoseries`), and embed URLs with live thumbnail preview.
+  - Privacy-enhanced embedded YouTube playback (`youtube-nocookie.com`).
+- **Learning Tracking**:
+  - Mark lessons and playlists complete/incomplete; automatically remembers last watched position.
+  - Distraction-free theatre mode, quick module drawer, and direct links to linked notes, PDFs, and visual diagrams.
 
 ### 4. Learning Analytics
 - Tracked study time, active days, streak, and 7-day consistency chart

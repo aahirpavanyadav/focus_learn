@@ -90,13 +90,41 @@
             <form id="courseForm"><label for="courseName">Course name</label><input id="courseName" maxlength="70" placeholder="e.g. JavaScript Mastery" required><label for="courseDescription">Description <span class="optional">Optional</span></label><textarea id="courseDescription" rows="3" maxlength="180" placeholder="What will you learn?"></textarea><button class="primary-button full" type="submit">Create course <span>→</span></button></form>
           </div>
           <div class="panel add-panel">
-            <div class="panel-title"><div><span class="step">02</span><h3>Add a lesson</h3></div></div>
-            <form id="lessonForm">
+            <div class="panel-title"><div><span class="step">02</span><h3>Add content to course</h3></div></div>
+            <div class="content-type-tabs">
+              <button type="button" class="type-tab-btn active" data-add-mode="video">📺 Single video</button>
+              <button type="button" class="type-tab-btn" data-add-mode="playlist">📑 YouTube playlist</button>
+              <button type="button" class="type-tab-btn" data-add-mode="bulk">📋 Batch URLs</button>
+            </div>
+
+            <!-- Single Video Form -->
+            <form id="lessonForm" class="add-mode-form">
               <label for="lessonCourse">Add to course</label><select id="lessonCourse" required><option value="">Choose a course</option></select>
               <label for="moduleName">Module name</label><input id="moduleName" maxlength="70" placeholder="e.g. JavaScript fundamentals" required>
+              <label for="videoTitle">Video title <span class="optional">Optional</span></label><input id="videoTitle" maxlength="120" placeholder="Leave blank to use lesson number">
               <label for="videoUrl">YouTube video URL</label><div class="url-input"><input id="videoUrl" type="url" placeholder="https://www.youtube.com/watch?v=..." required><span>YT</span></div>
               <div class="video-preview" id="videoPreview"><div class="preview-placeholder">▶</div><div><strong>Video preview</strong><small>Paste a YouTube URL to preview its thumbnail.</small></div></div>
-              <button class="primary-button full" type="submit">Add lesson <span>＋</span></button>
+              <button class="primary-button full" type="submit">Add video <span>＋</span></button>
+            </form>
+
+            <!-- YouTube Playlist Form -->
+            <form id="playlistForm" class="add-mode-form" hidden>
+              <label for="playlistCourse">Add to course</label><select id="playlistCourse" required><option value="">Choose a course</option></select>
+              <label for="playlistModuleName">Module name</label><input id="playlistModuleName" maxlength="70" placeholder="e.g. Full Course Series" required>
+              <label for="playlistTitle">Playlist title <span class="required">*</span></label><input id="playlistTitle" maxlength="120" placeholder="e.g. Complete React &amp; Next.js Masterclass" required>
+              <label for="playlistUrl">YouTube playlist URL or ID</label><div class="url-input"><input id="playlistUrl" type="url" placeholder="https://www.youtube.com/playlist?list=PL..." required><span style="background:#29243c;color:#b9adff">PL</span></div>
+              <div class="video-preview" id="playlistPreview"><div class="preview-placeholder" style="background:#262238;color:#b9adff">≡</div><div><strong>Playlist preview</strong><small>Paste a YouTube playlist URL (contains ?list=PL...).</small></div></div>
+              <button class="primary-button full" type="submit">Add playlist to course <span>＋</span></button>
+            </form>
+
+            <!-- Batch URLs Form -->
+            <form id="bulkForm" class="add-mode-form" hidden>
+              <label for="bulkCourse">Add to course</label><select id="bulkCourse" required><option value="">Choose a course</option></select>
+              <label for="bulkModuleName">Module name</label><input id="bulkModuleName" maxlength="70" placeholder="e.g. Playlist Lessons" required>
+              <label for="bulkUrls">YouTube video URLs <span class="optional">One per line</span></label>
+              <textarea id="bulkUrls" rows="4" placeholder="https://www.youtube.com/watch?v=...&#10;https://www.youtube.com/watch?v=...&#10;https://youtu.be/..." required></textarea>
+              <div class="small muted" id="bulkCounter" style="margin-top:6px">0 valid YouTube links detected</div>
+              <button class="primary-button full" type="submit">Import all videos <span>＋</span></button>
             </form>
           </div>
         </div>
@@ -610,6 +638,50 @@
           <button type="button" class="mini-button delete" id="viewPdfDeleteBtn">⌫ Delete</button>
         </div>
       </aside>
+    </div>
+  </div>
+
+  <!-- Edit Video / Playlist Modal -->
+  <div class="pic-modal-overlay" id="editContentModalOverlay" hidden>
+    <div class="pic-modal" role="dialog" aria-modal="true" aria-labelledby="editContentModalTitle">
+      <div class="pic-modal-head">
+        <h3 id="editContentModalTitle">Edit content</h3>
+        <button type="button" class="modal-close-btn" id="editContentModalClose" aria-label="Close dialog">✕</button>
+      </div>
+      <form id="editContentForm" class="pic-modal-form">
+        <input type="hidden" id="editCourseId">
+        <input type="hidden" id="editModuleId">
+        <input type="hidden" id="editLessonId">
+        <input type="hidden" id="editIsPlaylist">
+
+        <div>
+          <label for="editTitleInput">Title <span class="required">*</span></label>
+          <input type="text" id="editTitleInput" maxlength="120" required>
+        </div>
+
+        <div>
+          <label for="editModuleInput">Module name <span class="required">*</span></label>
+          <input type="text" id="editModuleInput" maxlength="70" required>
+        </div>
+
+        <div>
+          <label for="editUrlInput" id="editUrlLabel">YouTube URL <span class="required">*</span></label>
+          <div class="url-input">
+            <input type="url" id="editUrlInput" required>
+            <span id="editUrlBadge">YT</span>
+          </div>
+        </div>
+
+        <div class="video-preview" id="editPreviewBox">
+          <div class="preview-placeholder">▶</div>
+          <div><strong>Preview</strong><small></small></div>
+        </div>
+
+        <div class="pic-modal-actions">
+          <button type="button" class="secondary-button" id="editContentCancelBtn">Cancel</button>
+          <button type="submit" class="primary-button" id="editContentSaveBtn">Save changes <span>✓</span></button>
+        </div>
+      </form>
     </div>
   </div>
 

@@ -214,7 +214,14 @@ button:disabled{opacity:.55;cursor:not-allowed}
 .note-viewer-details p{margin:0;font-size:12px;color:#d5d0f1;line-height:1.5}
 .note-viewer-content{background:#111317;border:1px solid var(--line);border-radius:8px;padding:16px;font-size:13px;line-height:1.7;color:#e1e3ea;white-space:pre-wrap;overflow-wrap:anywhere}
 
-/* PDF Lightbox container & frame */
+/* Add content switcher tabs */
+.content-type-tabs{display:flex;gap:6px;margin-bottom:16px;background:#111317;padding:4px;border-radius:8px;border:1px solid #282b33}
+.type-tab-btn{flex:1;background:transparent;border:0;color:var(--muted);font-size:11px;font-weight:700;padding:8px 10px;border-radius:6px;cursor:pointer;transition:.18s;text-align:center}
+.type-tab-btn:hover{color:var(--text)}
+.type-tab-btn.active{background:#252333;color:#c6bcff}
+.lesson-thumb.playlist-thumb{background:#262238;color:#b9adff;display:grid;place-items:center;font-size:16px;font-weight:700}
+.lesson-row.playlist-row{background:linear-gradient(90deg,#191823,#17191e);border-left:3px solid var(--purple);padding-left:8px;border-radius:4px}
+
 .pdf-lightbox-container{max-width:1300px;height:min(92vh,850px)}
 .pdf-lightbox-main{width:100%;height:100%;display:flex;flex-direction:column}
 .pdf-frame-wrapper{flex:1;width:100%;height:100%;overflow:hidden;background:#0e1014}
