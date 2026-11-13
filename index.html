@@ -384,7 +384,34 @@
       </section>
 
       <section class="page" id="page-settings">
-        <div class="page-heading"><p class="eyebrow">YOUR DATA, YOUR CONTROL</p><h1>Settings</h1><p class="muted">Your library stays in this browser. Export a backup whenever you need it.</p></div>
+        <div class="page-heading">
+          <div>
+            <p class="eyebrow">YOUR DATA, YOUR CONTROL</p>
+            <h1>Settings</h1>
+            <p class="muted">Your library stays in this browser. Personalize your visual style and export backups anytime.</p>
+          </div>
+        </div>
+
+        <!-- UI / UX Appearance & Color Combos Panel -->
+        <div class="panel theme-settings-panel">
+          <div class="theme-panel-head">
+            <div>
+              <p class="eyebrow">UI / UX APPEARANCE</p>
+              <h2>Color Combo &amp; Theme</h2>
+              <p class="muted">Select from 5 carefully tuned color combinations. Every component, card, button, border, and player updates instantly.</p>
+            </div>
+            <span class="theme-active-indicator" id="themeActiveIndicator">Current: Cosmic Violet</span>
+          </div>
+          <div class="theme-grid" id="themeCardsGrid"></div>
+        </div>
+
+        <div class="section-heading" style="margin-top:28px">
+          <div>
+            <p class="eyebrow">DATA PORTABILITY</p>
+            <h2>Backup &amp; Storage Management</h2>
+          </div>
+        </div>
+
         <div class="settings-grid">
           <div class="panel settings-card"><div class="settings-symbol purple">⇧</div><h3>Export your library</h3><p>Download all courses, lessons, progress, saved pictures, notes, and PDFs as a JSON backup.</p><button class="primary-button" id="exportButton">Download backup <span>↓</span></button></div>
           <div class="panel settings-card"><div class="settings-symbol green">⇩</div><h3>Import a backup</h3><p>Restore a previously exported FocusLearn JSON file (including courses, pictures, notes, and PDFs). This replaces the current library.</p><label class="secondary-button file-button" for="importFile">Choose JSON file</label><input type="file" id="importFile" accept=".json,application/json" hidden></div>

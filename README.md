@@ -63,8 +63,17 @@ Store, edit, save, view, and delete both PDF documents and created study notes d
 - Tracked study time, active days, streak, and 7-day consistency chart
 - Manual study timer in the lesson player with browser tab visibility detection
 
-### 5. Settings & Complete Backup Portability
-- **Export Backup**: Download a single JSON file containing all your courses, modules, lessons, analytics sessions, saved pictures, created notes, and stored PDFs.
+### 5. Settings, UI/UX Themes & Complete Backup Portability
+- **UI/UX Color Combos & Themes Panel**:
+  - Choose between 5 carefully tuned color combinations designed for long study sessions:
+    1. **Cosmic Violet** (Default): Midnight navy with vibrant electric violet.
+    2. **Emerald Mint**: Forest obsidian with sage & lush emerald mint.
+    3. **Cyberpunk Amber**: Warm carbon slate with luminous amber gold.
+    4. **Oceanic Cyan**: Arctic sapphire with electric neon cyan & sky blue.
+    5. **Crimson Rose**: Dark ruby charcoal with glowing coral & rose.
+  - Every UI element dynamically updates: buttons, navigation, cards, player borders, progress bars, swatches, focus rings, and badges.
+  - Theme choices persist in `localStorage` and are preserved across sessions and JSON backups.
+- **Export Backup**: Download a single JSON file containing all your courses, modules, lessons, playlist videos, analytics sessions, visual pictures, created notes, stored PDFs, and theme preferences.
 - **Import Backup**: Restore your complete library on any device or browser.
 - **Reset Library**: Clear all courses, pictures, notes, and PDFs from client storage with confirmation.
 

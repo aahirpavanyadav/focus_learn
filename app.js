@@ -39,6 +39,106 @@
   };
   const expandedPlaylistIds = new Set();
 
+  const THEMES = [
+    {
+      id: "cosmic",
+      name: "Cosmic Violet",
+      desc: "Midnight navy with vibrant electric violet",
+      badge: "Original Focus",
+      swatches: ["#0f1015", "#171920", "#9b8cff", "#71d6a1"]
+    },
+    {
+      id: "emerald",
+      name: "Emerald Mint",
+      desc: "Forest obsidian with sage & lush mint",
+      badge: "Calm & Clarity",
+      swatches: ["#09120e", "#101c16", "#4ade80", "#eab308"]
+    },
+    {
+      id: "amber",
+      name: "Cyberpunk Amber",
+      desc: "Warm carbon slate with radiant amber gold",
+      badge: "High Energy",
+      swatches: ["#13110d", "#1c1913", "#f59e0b", "#34d399"]
+    },
+    {
+      id: "cyan",
+      name: "Oceanic Cyan",
+      desc: "Arctic sapphire with neon cyan & sky blue",
+      badge: "Nordic Crisp",
+      swatches: ["#0a1118", "#101c26", "#38bdf8", "#34d399"]
+    },
+    {
+      id: "rose",
+      name: "Crimson Rose",
+      desc: "Dark ruby night with glowing coral & rose",
+      badge: "Vibrant Studio",
+      swatches: ["#140e12", "#1f141a", "#fb7185", "#fbbf24"]
+    }
+  ];
+
+  let currentTheme = localStorage.getItem("focuslearn.theme") || "cosmic";
+
+  function applyTheme(themeId, notifyUser = false) {
+    const t = THEMES.find(x => x.id === themeId) || THEMES[0];
+    currentTheme = t.id;
+    document.documentElement.setAttribute("data-theme", t.id);
+    localStorage.setItem("focuslearn.theme", t.id);
+
+    const ind = $("#themeActiveIndicator");
+    if (ind) ind.textContent = `Current: ${t.name}`;
+
+    $$(".theme-card").forEach(c => {
+      c.classList.toggle("active", c.dataset.themeId === t.id);
+    });
+
+    if (notifyUser) notify(`Theme changed to ${t.name}.`);
+  }
+
+  function renderThemeCards() {
+    const grid = $("#themeCardsGrid");
+    if (!grid) return;
+    grid.innerHTML = THEMES.map(t => {
+      const isActive = currentTheme === t.id;
+      return `
+        <div class="theme-card ${isActive ? "active" : ""}" data-theme-id="${t.id}" role="button" tabindex="0">
+          <div class="theme-card-header">
+            <span class="theme-card-title">${esc(t.name)}</span>
+            <span class="theme-card-check">✓ Active</span>
+          </div>
+          <div class="theme-swatches">
+            ${t.swatches.map(c => `<span class="theme-swatch" style="background:${c}"></span>`).join("")}
+          </div>
+          <p class="theme-card-desc">${esc(t.desc)}</p>
+          <span class="theme-card-badge">${esc(t.badge)}</span>
+        </div>
+      `;
+    }).join("");
+  }
+
+  function parseVideoLine(line, defaultIndex = 1) {
+    const trimmed = (line || "").trim();
+    if (!trimmed) return null;
+    const urlMatch = trimmed.match(/https?:\/\/[^\s]+/);
+    const targetUrl = urlMatch ? urlMatch[0] : trimmed;
+    const id = videoId(targetUrl);
+    if (!id) return null;
+
+    let extractedTitle = "";
+    if (urlMatch) {
+      const withoutUrl = trimmed.replace(urlMatch[0], "").trim();
+      const clean = withoutUrl.replace(/^[\d\s.\-:#|()]+|[\s.\-:#|()]+$/g, "").trim();
+      if (clean.length >= 2 && clean.length <= 120) {
+        extractedTitle = clean;
+      }
+    }
+
+    return {
+      videoId: id,
+      title: extractedTitle || `Video ${defaultIndex}`
+    };
+  }
+
   function uid(){ return (globalThis.crypto && crypto.randomUUID) ? crypto.randomUUID() : Date.now().toString(36)+Math.random().toString(36).slice(2); }
   function load(){
     try {
@@ -378,7 +478,9 @@
 
   function videoId(raw){
     try {
-      const u=new URL(raw.trim()); let id="";
+      const trimmed = (raw || "").trim();
+      if (/^[A-Za-z0-9_-]{11}$/.test(trimmed)) return trimmed;
+      const u=new URL(trimmed); let id="";
       if(u.hostname==="youtu.be" || u.hostname.endsWith(".youtu.be")) id=u.pathname.split("/").filter(Boolean)[0]||"";
       else if(["youtube.com","www.youtube.com","m.youtube.com","music.youtube.com","youtube-nocookie.com","www.youtube-nocookie.com"].includes(u.hostname)){
         if(u.pathname==="/watch") id=u.searchParams.get("v")||"";
@@ -519,6 +621,7 @@
     if(page==="analytics")renderAnalytics();
     if(page==="pictures")renderPictures();
     if(page==="notes")renderDocuments();
+    if(page==="settings")renderThemeCards();
     window.scrollTo({top:0,behavior:"smooth"});
   }
   function renderDashboard(){
@@ -1325,6 +1428,7 @@
     renderManagement();
     renderPictures();
     renderDocuments();
+    renderThemeCards();
     if($("#page-analytics")?.classList.contains("active"))renderAnalytics();
   }
 
@@ -1336,7 +1440,7 @@
     openLesson(target.id);navigate("player");
   }
 
-  function openLesson(lid){
+  function openLesson(lid, activePvid = null){
     const c=state.courses.find(x=>x.id===currentCourseId);if(!c)return;
     const l=lessons(c).find(x=>x.id===lid);if(!l)return;
     if(timerRunning)stopTimer(true);
@@ -1395,6 +1499,10 @@
 
       switchSideTab("playlist");
       renderPlaylistSidePanel(l);
+      setTimeout(() => {
+        const activeItem = $("#sidePlaylistList .playlist-side-item.playing");
+        if (activeItem) activeItem.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      }, 50);
     } else {
       if (sidePlaylistBtn) sidePlaylistBtn.hidden = true;
       switchSideTab("curriculum");
@@ -1814,15 +1922,18 @@
     targetLesson.videos = Array.isArray(targetLesson.videos) ? targetLesson.videos : [];
 
     let addedCount = 0;
-    validIds.forEach(id => {
-      targetLesson.videos.push({
-        id: uid(),
-        videoId: id,
-        title: `Video ${targetLesson.videos.length + 1}`,
-        completed: false,
-        addedAt: new Date().toISOString()
-      });
-      addedCount++;
+    lines.forEach(line => {
+      const parsed = parseVideoLine(line, targetLesson.videos.length + 1);
+      if (parsed) {
+        targetLesson.videos.push({
+          id: uid(),
+          videoId: parsed.videoId,
+          title: parsed.title,
+          completed: false,
+          addedAt: new Date().toISOString()
+        });
+        addedCount++;
+      }
     });
 
     save();
@@ -1935,12 +2046,12 @@
     const vidLines = ($("#playlistVideosInput")?.value || "").split("\n").map(l => l.trim()).filter(Boolean);
     const initialVideos = [];
     vidLines.forEach((line, idx) => {
-      const vId = videoId(line);
-      if (vId && !initialVideos.some(x => x.videoId === vId)) {
+      const parsed = parseVideoLine(line, idx + 1);
+      if (parsed && !initialVideos.some(x => x.videoId === parsed.videoId)) {
         initialVideos.push({
           id: uid(),
-          videoId: vId,
-          title: `Video ${idx + 1}`,
+          videoId: parsed.videoId,
+          title: parsed.title,
           completed: false,
           addedAt: new Date().toISOString()
         });
@@ -1989,29 +2100,27 @@
     if (!c) { notify("Select a course first."); return; }
     if (!mn) { notify("Enter a module name."); return; }
 
-    const validIds = lines.map(l => videoId(l)).filter(Boolean);
-    if (!validIds.length) { notify("No valid YouTube video URLs found in the text."); return; }
-
-    let m = c.modules.find(x => x.name.toLowerCase() === mn.toLowerCase());
-    if (!m) {
-      m = { id: uid(), name: mn, lessons: [] };
-      c.modules.push(m);
-    }
-
-    validIds.forEach((id) => {
-      m.lessons.push({
-        id: uid(),
-        videoId: id,
-        title: `Lesson ${m.lessons.length + 1}`,
-        completed: false,
-        addedAt: new Date().toISOString()
-      });
+    let added = 0;
+    lines.forEach(line => {
+      const parsed = parseVideoLine(line, m.lessons.length + 1);
+      if (parsed) {
+        m.lessons.push({
+          id: uid(),
+          videoId: parsed.videoId,
+          title: parsed.title,
+          completed: false,
+          addedAt: new Date().toISOString()
+        });
+        added++;
+      }
     });
+
+    if (!added) { notify("No valid YouTube video URLs found in the text."); return; }
 
     $("#bulkForm").reset();
     $("#bulkCounter").textContent = "0 valid YouTube links detected";
     save();
-    notify(`${validIds.length} video${validIds.length === 1 ? "" : "s"} imported into course.`);
+    notify(`${added} video${added === 1 ? "" : "s"} imported into course.`);
   });
 
   // Pictures Form & Controls
@@ -2685,6 +2794,13 @@
       return;
     }
 
+    // Theme selection in Settings
+    const tc = e.target.closest("[data-theme-id]");
+    if (tc) {
+      applyTheme(tc.dataset.themeId, true);
+      return;
+    }
+
     // Delete Course
     const del = e.target.closest("[data-delete-course]");
     if (del && confirm("Delete this course and all its lessons and playlists?")) {
@@ -2707,7 +2823,7 @@
       if (!$("#picLightboxOverlay")?.hidden) { closeLightbox(); return; }
       if (!$("#picModalOverlay")?.hidden) { closePicModal(); return; }
     }
-    if ((e.key === "Enter" || e.key === " ") && e.target.matches("[data-lesson],[data-open-course],[data-view-pic],[data-view-note],[data-view-pdf]")) {
+    if ((e.key === "Enter" || e.key === " ") && e.target.matches("[data-lesson],[data-open-course],[data-view-pic],[data-view-note],[data-view-pdf],[data-theme-id]")) {
       e.preventDefault();
       e.target.click();
     }
@@ -2744,6 +2860,7 @@
     const payload = {
       app: "FocusLearn",
       version: 4,
+      theme: currentTheme,
       exportedAt: new Date().toISOString(),
       ...state,
       pictures: pics,
@@ -2764,6 +2881,10 @@
       if (!Array.isArray(cs) || !cs.every(c => c && typeof c.name === "string" && Array.isArray(c.modules) && c.modules.every(m => typeof m.name === "string" && Array.isArray(m.lessons) && m.lessons.every(l => typeof l.title === "string" && ((typeof l.videoId === "string" && /^[A-Za-z0-9_-]{11}$/.test(l.videoId)) || (typeof l.playlistId === "string" && /^[A-Za-z0-9_-]{8,64}$/.test(l.playlistId)) || l.videoId === "videoseries"))))) throw Error();
       if (!confirm("Import replaces your current library, pictures, notes, and PDFs. Continue?")) return;
       state = { courses: cs, sessions: Array.isArray(p.sessions) ? p.sessions : [] };
+
+      if (p.theme && THEMES.some(x => x.id === p.theme)) {
+        applyTheme(p.theme, false);
+      }
 
       if (Array.isArray(p.pictures)) {
         await PicDB.clear();
@@ -2805,6 +2926,7 @@
   });
 
   // Initialize DB and load pictures and documents
+  applyTheme(currentTheme, false);
   Promise.all([PicDB.getAll(), DocDB.getAll()]).then(([pics, docs]) => {
     picturesList = Array.isArray(pics) ? pics : [];
     docsList = Array.isArray(docs) ? docs : [];
