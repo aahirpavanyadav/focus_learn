@@ -34,10 +34,20 @@ Store, edit, save, view, and delete both PDF documents and created study notes d
 
 ### 3. Courses, Playlists & Lesson Management
 - Group lessons and playlists into customizable courses and organized modules.
-- **YouTube Playlist Support**:
+- **YouTube Playlist Support & Dedicated Side Panel**:
   - Add full YouTube playlists by playlist URL (`youtube.com/playlist?list=...`) or playlist ID (`PL...`, `UU...`, `FL...`, `RD...`, `OLAK...`).
-  - Interactive playlist playback in the distraction-free player via YouTube's native `videoseries` player with playlist drawer, track index, and auto-progression.
-  - **Batch Video Importer**: Paste a multiline list of YouTube video URLs extracted from a playlist or syllabus to add multiple lessons in one click.
+  - **Dedicated Playlist Side Panel in Learning Space**:
+    - When a playlist is active, the player sidebar automatically switches to a dedicated **Playlist Videos** tab.
+    - Shows all videos in that YouTube playlist with thumbnail, track index, title, completed status, and active playing indicator (`▶`).
+    - **One-Click Play**: Click any video in the playlist side panel to immediately load and play it in the main player with continuous playlist context!
+    - **Individual Video Tracking**: Mark individual playlist videos complete (`✓`/`○`) with live course progress calculation.
+    - **Edit & Delete Playlist Videos**: Click `✎` to edit any video's title or URL, or `🗑` to delete it directly from the playlist side panel.
+    - **Quick Add & Paste**: Add single videos (`＋ Add`) or bulk-paste video links (`📋 Paste`) directly into the active playlist.
+    - **Auto-Fetch from YouTube**: Click `⚡ Fetch` to attempt automatically retrieving playlist video titles and IDs via public YouTube feeds.
+    - **Full Series Mode**: Click `≡ Series` to switch to continuous full playlist playback.
+  - **Course Management Expanded Sublist**:
+    - In Course Management, playlists display their video count and an expandable `▼ Videos (X)` sublist.
+    - Directly manage, play, edit, add, or delete individual videos in the playlist from Course Management.
 - **Edit, Save & Delete Content**:
   - Modal editor for both playlists and individual video lessons: update Title, Module assignment, and YouTube URL/ID with live validation and preview.
   - Delete individual videos or entire playlists from any module with a single click and confirmation.

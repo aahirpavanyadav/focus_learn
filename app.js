@@ -37,6 +37,7 @@
     courseId: "",
     sort: "newest"
   };
+  const expandedPlaylistIds = new Set();
 
   function uid(){ return (globalThis.crypto && crypto.randomUUID) ? crypto.randomUUID() : Date.now().toString(36)+Math.random().toString(36).slice(2); }
   function load(){
@@ -406,6 +407,70 @@
     }
   }
 
+  async function fetchPlaylistVideosFromYouTube(playlistId) {
+    if (!playlistId) return [];
+    const rssUrl = `https://www.youtube.com/feeds/videos.xml?playlist_id=${playlistId}`;
+    const proxies = [
+      `https://corsproxy.io/?url=${encodeURIComponent(rssUrl)}`,
+      `https://api.allorigins.win/raw?url=${encodeURIComponent(rssUrl)}`,
+      `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(rssUrl)}`
+    ];
+
+    for (const pUrl of proxies) {
+      try {
+        const ctrl = new AbortController();
+        const tid = setTimeout(() => ctrl.abort(), 4000);
+        const res = await fetch(pUrl, { signal: ctrl.signal });
+        clearTimeout(tid);
+        if (!res.ok) continue;
+        const text = await res.text();
+        if (!text || (!text.includes("<feed") && !text.includes("<entry"))) continue;
+
+        const results = [];
+        const entries = text.split(/<\/?entry>/i);
+        for (const entry of entries) {
+          const idMatch = entry.match(/<yt:videoId>([^<]+)<\/yt:videoId>/i) || entry.match(/videoId>([^<]+)</i);
+          const titleMatch = entry.match(/<title>([^<]+)<\/title>/i);
+          if (idMatch && idMatch[1]) {
+            const vId = idMatch[1].trim();
+            let rawTitle = titleMatch ? titleMatch[1].trim() : `Video ${results.length + 1}`;
+            rawTitle = rawTitle.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+            results.push({ videoId: vId, title: rawTitle });
+          }
+        }
+        if (results.length > 0) return results;
+      } catch {
+        // try next proxy
+      }
+    }
+
+    const invidious = [
+      "https://inv.tux.pizza",
+      "https://invidious.nerdvpn.de",
+      "https://yt.artemislena.eu"
+    ];
+    for (const inst of invidious) {
+      try {
+        const ctrl = new AbortController();
+        const tid = setTimeout(() => ctrl.abort(), 3500);
+        const res = await fetch(`${inst}/api/v1/playlists/${playlistId}`, { signal: ctrl.signal });
+        clearTimeout(tid);
+        if (!res.ok) continue;
+        const json = await res.json();
+        if (Array.isArray(json.videos) && json.videos.length > 0) {
+          return json.videos.map((v, i) => ({
+            videoId: v.videoId,
+            title: v.title || `Video ${i + 1}`
+          }));
+        }
+      } catch {
+        // try next
+      }
+    }
+
+    return [];
+  }
+
   const thumb=id=>`https://i.ytimg.com/vi/${id}/mqdefault.jpg`;
   const lessons=c=>(c.modules||[]).flatMap(m=>m.lessons||[]);
   const stats=c=>{const a=lessons(c),d=a.filter(x=>x.completed).length;return {total:a.length,done:d,pct:a.length?Math.round(d/a.length*100):0};};
@@ -489,6 +554,8 @@
           <div class="module-title">${esc(m.name)}</div>
           ${m.lessons.map(l => {
             const isPl = !!(l.isPlaylist || l.playlistId);
+            const vCount = Array.isArray(l.videos) ? l.videos.length : 0;
+            const isExpanded = expandedPlaylistIds.has(l.id);
             const thumbHtml = (l.videoId && l.videoId !== "videoseries")
               ? `<img class="lesson-thumb" src="${thumb(l.videoId)}" alt="" loading="lazy">`
               : `<div class="lesson-thumb playlist-thumb" title="YouTube Playlist"><span>≡</span></div>`;
@@ -500,13 +567,39 @@
                     <strong>${esc(l.title)}</strong>
                     ${isPl ? '<span class="pic-category-badge badge-pdf" style="font-size:8px;padding:2px 5px">PLAYLIST</span>' : ''}
                   </div>
-                  <small>${isPl ? 'YouTube Playlist' : (l.completed ? 'Completed' : 'Not completed')}</small>
+                  <small>${isPl ? `YouTube Playlist · ${vCount} video${vCount === 1 ? "" : "s"}` : (l.completed ? 'Completed' : 'Not completed')}</small>
                 </div>
                 ${l.completed ? '<span class="lesson-status">✓ Done</span>' : ''}
                 <button type="button" class="mini-button" data-play="${c.id}|${l.id}">Open</button>
+                ${isPl ? `<button type="button" class="mini-button" data-toggle-playlist-expand="${l.id}">${isExpanded ? "▲ Hide" : "▼"} Videos (${vCount})</button>` : ''}
                 <button type="button" class="mini-button edit" data-edit-content="${c.id}|${m.id}|${l.id}">Edit</button>
                 <button type="button" class="mini-button delete" data-delete-lesson="${c.id}|${m.id}|${l.id}">Remove</button>
               </div>
+              ${isPl && isExpanded ? `
+                <div class="playlist-mgmt-sublist">
+                  <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0">
+                    <span class="muted small" style="font-weight:700">VIDEOS IN THIS PLAYLIST (${vCount})</span>
+                    <div style="display:flex;gap:6px">
+                      <button type="button" class="mini-btn-action" data-add-vid-playlist="${c.id}|${m.id}|${l.id}">＋ Add video</button>
+                      <button type="button" class="mini-btn-action" data-paste-vids-playlist="${c.id}|${m.id}|${l.id}">📋 Paste URLs</button>
+                    </div>
+                  </div>
+                  ${vCount === 0 ? '<p class="muted small" style="margin:4px 0 8px">No videos listed yet. Click "+ Add video" or "Paste URLs" to add videos.</p>' : (l.videos || []).map((v, vIdx) => `
+                    <div class="playlist-mgmt-item">
+                      <img src="${thumb(v.videoId)}" alt="" class="pmi-thumb" loading="lazy">
+                      <div class="pmi-info">
+                        <div class="pmi-title">#${vIdx + 1}. ${esc(v.title)}</div>
+                        <div class="pmi-meta">${v.completed ? '<span class="badge-done">✓ Done</span> · ' : ''}${v.videoId}</div>
+                      </div>
+                      <div class="pmi-actions">
+                        <button type="button" class="mini-button" data-play-pvid="${c.id}|${l.id}|${v.id}" title="Play in learning space">▶ Play</button>
+                        <button type="button" class="mini-button edit" data-edit-pvid="${c.id}|${m.id}|${l.id}|${v.id}" title="Edit title or URL">✎</button>
+                        <button type="button" class="mini-button delete" data-delete-pvid="${c.id}|${m.id}|${l.id}|${v.id}" title="Remove from playlist">🗑</button>
+                      </div>
+                    </div>
+                  `).join("")}
+                </div>
+              ` : ''}
             `;
           }).join("")}
         </div>
@@ -1259,35 +1352,487 @@
       ? (l.completed ? "Completed YouTube playlist · Progress saved" : "Interactive YouTube Playlist · Track list and continuous playback supported")
       : (l.completed ? "Completed lesson · Progress saved" : "Your progress is saved automatically on this device.");
 
+    l.videos = Array.isArray(l.videos) ? l.videos : [];
+    const sidePlaylistBtn = $("#tabPlaylistBtn");
+    const sideCount = $("#sidePlaylistCount");
+
     if (isPl) {
-      const pId = l.playlistId || l.videoId;
-      const vParam = (l.videoId && l.videoId !== "videoseries") ? `&v=${l.videoId}` : "";
-      $("#videoFrame").innerHTML=`<iframe src="https://www.youtube-nocookie.com/embed/videoseries?list=${pId}${vParam}&rel=0&modestbranding=1" title="${esc(l.title)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>`;
+      if (sidePlaylistBtn) {
+        sidePlaylistBtn.hidden = false;
+        if (sideCount) sideCount.textContent = l.videos.length;
+      }
+
+      let activeV = null;
+      if (activePvid) {
+        activeV = l.videos.find(v => v.id === activePvid);
+        if (activeV) l.activeVideoRecordId = activeV.id;
+      } else if (l.activeVideoRecordId) {
+        activeV = l.videos.find(v => v.id === l.activeVideoRecordId);
+      }
+
+      if (activeV) {
+        $("#playerLessonTitle").textContent = activeV.title;
+        $("#playerLessonMeta").textContent = `Playing from playlist: "${l.title}" · Video ID: ${activeV.videoId}`;
+        $("#videoFrame").innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${activeV.videoId}?autoplay=1&list=${l.playlistId}&rel=0&modestbranding=1" title="${esc(activeV.title)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>`;
+        $("#completeButton").classList.toggle("done", !!activeV.completed);
+        $("#completeButton").textContent = activeV.completed ? "✓ Video done — mark incomplete" : "✓ Mark video complete";
+      } else if (l.videos.length > 0) {
+        activeV = l.videos[0];
+        l.activeVideoRecordId = activeV.id;
+        $("#playerLessonTitle").textContent = activeV.title;
+        $("#playerLessonMeta").textContent = `Playing #1 from playlist: "${l.title}" · Video ID: ${activeV.videoId}`;
+        $("#videoFrame").innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${activeV.videoId}?autoplay=1&list=${l.playlistId}&rel=0&modestbranding=1" title="${esc(activeV.title)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>`;
+        $("#completeButton").classList.toggle("done", !!activeV.completed);
+        $("#completeButton").textContent = activeV.completed ? "✓ Video done — mark incomplete" : "✓ Mark video complete";
+      } else {
+        l.activeVideoRecordId = null;
+        $("#playerLessonTitle").textContent = l.title;
+        $("#playerLessonMeta").textContent = l.completed ? "Completed YouTube playlist · Progress saved" : "Interactive YouTube Playlist · Continuous player";
+        $("#videoFrame").innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/videoseries?list=${l.playlistId}&rel=0&modestbranding=1" title="${esc(l.title)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>`;
+        $("#completeButton").classList.toggle("done", !!l.completed);
+        $("#completeButton").textContent = l.completed ? "✓ Completed — mark incomplete" : "✓ Mark complete";
+      }
+
+      switchSideTab("playlist");
+      renderPlaylistSidePanel(l);
     } else {
-      $("#videoFrame").innerHTML=`<iframe src="https://www.youtube-nocookie.com/embed/${l.videoId}?rel=0&modestbranding=1" title="${esc(l.title)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>`;
+      if (sidePlaylistBtn) sidePlaylistBtn.hidden = true;
+      switchSideTab("curriculum");
+      $("#playerLessonTitle").textContent = l.title;
+      $("#playerLessonMeta").textContent = l.completed ? "Completed lesson · Progress saved" : "Your progress is saved automatically on this device.";
+      $("#videoFrame").innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${l.videoId}?rel=0&modestbranding=1" title="${esc(l.title)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>`;
+      $("#completeButton").classList.toggle("done", !!l.completed);
+      $("#completeButton").textContent = l.completed ? "✓ Completed — mark incomplete" : "✓ Mark complete";
     }
 
-    $("#completeButton").classList.toggle("done",!!l.completed);
-    $("#completeButton").textContent=l.completed?"✓ Completed — mark incomplete":"✓ Mark complete";
-    const s=stats(c);
-    $("#curriculumProgress").textContent=s.pct+"%";
-    $("#curriculumBar").style.width=s.pct+"%";
+    const s = stats(c);
+    $("#curriculumProgress").textContent = s.pct + "%";
+    $("#curriculumBar").style.width = s.pct + "%";
 
-    $("#curriculumList").innerHTML=c.modules.map(m=>`
+    renderCurriculumList(c, lid);
+    timerElapsedBeforeStart = 0; renderTimer();
+  }
+
+  function renderCurriculumList(c, lid) {
+    const list = $("#curriculumList");
+    if (!list) return;
+    list.innerHTML = c.modules.map(m => `
       <div class="curriculum-module">${esc(m.name)}</div>
-      ${m.lessons.map(x=>{
+      ${m.lessons.map(x => {
         const isP = !!(x.isPlaylist || x.playlistId);
+        const vCount = Array.isArray(x.videos) ? x.videos.length : 0;
         return `
-          <div class="curriculum-lesson ${x.id===lid?"selected":""} ${x.completed?"done":""}" data-lesson="${x.id}" role="button" tabindex="0">
-            <span class="lesson-play">${x.completed?"✓":(isP?"≡":"▶")}</span>
-            <span>${isP ? `<strong style="font-size:9px;color:#c6bcff;display:block">PLAYLIST</strong>` : ""}${esc(x.title)}</span>
+          <div class="curriculum-lesson ${x.id === lid ? "selected" : ""} ${x.completed ? "done" : ""}" data-lesson="${x.id}" role="button" tabindex="0">
+            <span class="lesson-play">${x.completed ? "✓" : (isP ? "≡" : "▶")}</span>
+            <span>${isP ? `<strong style="font-size:9px;color:#c6bcff;display:block">PLAYLIST (${vCount})</strong>` : ""}${esc(x.title)}</span>
           </div>
         `;
       }).join("")}
     `).join("");
-
-    timerElapsedBeforeStart=0;renderTimer();
   }
+
+  function switchSideTab(tabName) {
+    const isPlaylist = tabName === "playlist";
+    $("#tabCurriculumBtn")?.classList.toggle("active", !isPlaylist);
+    $("#tabPlaylistBtn")?.classList.toggle("active", isPlaylist);
+    if ($("#sideCurriculumView")) $("#sideCurriculumView").hidden = isPlaylist;
+    if ($("#sidePlaylistView")) $("#sidePlaylistView").hidden = !isPlaylist;
+  }
+
+  $("#tabCurriculumBtn")?.addEventListener("click", () => switchSideTab("curriculum"));
+  $("#tabPlaylistBtn")?.addEventListener("click", () => switchSideTab("playlist"));
+
+  // Playlist Side Panel Functions
+  function renderPlaylistSidePanel(l, filterText = "") {
+    if (!l || !l.isPlaylist) return;
+    l.videos = Array.isArray(l.videos) ? l.videos : [];
+
+    $("#sidePlaylistTitle").textContent = l.title;
+    const doneCount = l.videos.filter(v => v.completed).length;
+    $("#sidePlaylistMeta").textContent = `${l.videos.length} video${l.videos.length === 1 ? "" : "s"} · ${doneCount} completed`;
+    if ($("#sidePlaylistCount")) $("#sidePlaylistCount").textContent = l.videos.length;
+
+    const container = $("#sidePlaylistList");
+    if (!container) return;
+
+    const query = (filterText || "").trim().toLowerCase();
+    const filtered = query
+      ? l.videos.filter(v => v.title.toLowerCase().includes(query) || v.videoId.toLowerCase().includes(query))
+      : l.videos;
+
+    if (l.videos.length === 0) {
+      container.innerHTML = `
+        <div class="empty-playlist-side">
+          <p><strong>0 videos listed in this playlist</strong></p>
+          <p class="muted small">Play the whole series via YouTube, or add video links to track each video in this side panel.</p>
+          <div style="display:flex;gap:6px;justify-content:center;margin-top:10px;flex-wrap:wrap">
+            <button type="button" class="mini-btn-action" id="sideEmptyAddBtn">＋ Add video</button>
+            <button type="button" class="mini-btn-action" id="sideEmptyPasteBtn">📋 Paste URLs</button>
+            <button type="button" class="mini-btn-action" id="sideEmptyFetchBtn">⚡ Auto-fetch</button>
+          </div>
+        </div>
+      `;
+      $("#sideEmptyAddBtn")?.addEventListener("click", () => openPlaylistVideoModal(l.id));
+      $("#sideEmptyPasteBtn")?.addEventListener("click", () => openPlaylistPasteModal(l.id));
+      $("#sideEmptyFetchBtn")?.addEventListener("click", () => handleFetchPlaylistVideos(l));
+      return;
+    }
+
+    if (filtered.length === 0) {
+      container.innerHTML = '<p class="muted small" style="text-align:center;padding:18px 0">No videos match your search.</p>';
+      return;
+    }
+
+    container.innerHTML = filtered.map(v => {
+      const origIndex = l.videos.indexOf(v);
+      const isPlaying = l.activeVideoRecordId === v.id;
+      return `
+        <div class="playlist-side-item ${isPlaying ? "playing" : ""} ${v.completed ? "done" : ""}" data-pvid="${v.id}" role="button" tabindex="0">
+          <div class="ps-thumb-wrap">
+            <img src="${thumb(v.videoId)}" alt="" class="ps-thumb" loading="lazy" onerror="this.style.display='none'">
+            <span class="ps-index">#${origIndex + 1}</span>
+            ${isPlaying ? '<span class="ps-playing-badge">▶</span>' : ''}
+          </div>
+          <div class="ps-info">
+            <div class="ps-title" title="${esc(v.title)}">${esc(v.title)}</div>
+            <div class="ps-meta">
+              ${v.completed ? '<span class="badge-done">✓ Done</span>' : '<span class="badge-ready">Ready</span>'}
+              <span class="ps-id-text">${v.videoId}</span>
+            </div>
+          </div>
+          <div class="ps-item-actions">
+            <button type="button" class="ps-btn-done" data-action="toggle-complete" data-pvid="${v.id}" title="${v.completed ? "Mark incomplete" : "Mark complete"}">${v.completed ? "✓" : "○"}</button>
+            <button type="button" class="ps-btn-edit" data-action="edit-video" data-pvid="${v.id}" title="Edit title or URL">✎</button>
+            <button type="button" class="ps-btn-delete" data-action="delete-video" data-pvid="${v.id}" title="Delete video from playlist">🗑</button>
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  $("#sidePlaylistSearch")?.addEventListener("input", e => {
+    const c = state.courses.find(x => x.id === currentCourseId); if (!c) return;
+    const l = lessons(c).find(x => x.id === currentLessonId); if (!l || !l.isPlaylist) return;
+    renderPlaylistSidePanel(l, e.target.value);
+  });
+
+  $("#sidePlayFullBtn")?.addEventListener("click", () => {
+    const c = state.courses.find(x => x.id === currentCourseId); if (!c) return;
+    const l = lessons(c).find(x => x.id === currentLessonId); if (!l || !l.isPlaylist) return;
+    l.activeVideoRecordId = null;
+    save();
+    $("#playerLessonTitle").textContent = l.title;
+    $("#playerLessonMeta").textContent = "Continuous YouTube playlist player";
+    $("#videoFrame").innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/videoseries?list=${l.playlistId}&rel=0&modestbranding=1" title="${esc(l.title)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>`;
+    $("#completeButton").classList.toggle("done", !!l.completed);
+    $("#completeButton").textContent = l.completed ? "✓ Completed — mark incomplete" : "✓ Mark complete";
+    renderPlaylistSidePanel(l, $("#sidePlaylistSearch")?.value);
+    notify("Switched to full playlist series player.");
+  });
+
+  $("#sideAddVidBtn")?.addEventListener("click", () => {
+    const c = state.courses.find(x => x.id === currentCourseId); if (!c) return;
+    const l = lessons(c).find(x => x.id === currentLessonId); if (!l || !l.isPlaylist) return;
+    openPlaylistVideoModal(l.id);
+  });
+
+  $("#sidePasteVidsBtn")?.addEventListener("click", () => {
+    const c = state.courses.find(x => x.id === currentCourseId); if (!c) return;
+    const l = lessons(c).find(x => x.id === currentLessonId); if (!l || !l.isPlaylist) return;
+    openPlaylistPasteModal(l.id);
+  });
+
+  $("#sideFetchVidsBtn")?.addEventListener("click", () => {
+    const c = state.courses.find(x => x.id === currentCourseId); if (!c) return;
+    const l = lessons(c).find(x => x.id === currentLessonId); if (!l || !l.isPlaylist) return;
+    handleFetchPlaylistVideos(l);
+  });
+
+  async function handleFetchPlaylistVideos(l) {
+    if (!l || !l.playlistId) return;
+    notify("Fetching playlist videos from YouTube...");
+    const btn = $("#sideFetchVidsBtn");
+    const origText = btn ? btn.textContent : "⚡ Fetch";
+    if (btn) btn.textContent = "⏳ Fetching...";
+    try {
+      const fetched = await fetchPlaylistVideosFromYouTube(l.playlistId);
+      if (fetched && fetched.length > 0) {
+        l.videos = Array.isArray(l.videos) ? l.videos : [];
+        let added = 0;
+        fetched.forEach(item => {
+          if (!l.videos.some(x => x.videoId === item.videoId)) {
+            l.videos.push({
+              id: uid(),
+              videoId: item.videoId,
+              title: item.title,
+              completed: false,
+              addedAt: new Date().toISOString()
+            });
+            added++;
+          }
+        });
+        save();
+        renderPlaylistSidePanel(l, $("#sidePlaylistSearch")?.value);
+        renderManagement();
+        notify(`Fetched ${fetched.length} videos from YouTube (${added} new added)!`);
+      } else {
+        notify("YouTube blocked direct fetch. Opening Paste dialog...");
+        openPlaylistPasteModal(l.id);
+      }
+    } catch {
+      notify("Could not fetch videos. You can paste URLs using Paste button.");
+      openPlaylistPasteModal(l.id);
+    } finally {
+      if (btn) btn.textContent = origText;
+    }
+  }
+
+  $("#sidePlaylistList")?.addEventListener("click", e => {
+    const c = state.courses.find(x => x.id === currentCourseId); if (!c) return;
+    const l = lessons(c).find(x => x.id === currentLessonId); if (!l || !l.isPlaylist) return;
+
+    const btnDone = e.target.closest('[data-action="toggle-complete"]');
+    if (btnDone) {
+      e.stopPropagation();
+      const pvid = btnDone.dataset.pvid;
+      const v = (l.videos || []).find(x => x.id === pvid);
+      if (!v) return;
+      v.completed = !v.completed;
+      l.completed = l.videos.length > 0 && l.videos.every(x => x.completed);
+      save();
+      renderPlaylistSidePanel(l, $("#sidePlaylistSearch")?.value);
+      const s = stats(c);
+      $("#curriculumProgress").textContent = s.pct + "%";
+      $("#curriculumBar").style.width = s.pct + "%";
+      renderCurriculumList(c, l.id);
+      if (l.activeVideoRecordId === v.id) {
+        $("#completeButton").classList.toggle("done", !!v.completed);
+        $("#completeButton").textContent = v.completed ? "✓ Video done — mark incomplete" : "✓ Mark video complete";
+      }
+      notify(v.completed ? "Video marked complete." : "Video marked incomplete.");
+      return;
+    }
+
+    const btnEdit = e.target.closest('[data-action="edit-video"]');
+    if (btnEdit) {
+      e.stopPropagation();
+      const pvid = btnEdit.dataset.pvid;
+      openPlaylistVideoModal(l.id, pvid);
+      return;
+    }
+
+    const btnDel = e.target.closest('[data-action="delete-video"]');
+    if (btnDel) {
+      e.stopPropagation();
+      const pvid = btnDel.dataset.pvid;
+      const v = (l.videos || []).find(x => x.id === pvid);
+      if (!v) return;
+      if (confirm(`Remove "${v.title}" from this playlist?`)) {
+        l.videos = l.videos.filter(x => x.id !== pvid);
+        if (l.activeVideoRecordId === pvid) {
+          l.activeVideoRecordId = l.videos.length > 0 ? l.videos[0].id : null;
+        }
+        save();
+        openLesson(l.id, l.activeVideoRecordId);
+        notify("Video removed from playlist.");
+      }
+      return;
+    }
+
+    const item = e.target.closest(".playlist-side-item");
+    if (item && item.dataset.pvid) {
+      const pvid = item.dataset.pvid;
+      openLesson(l.id, pvid);
+    }
+  });
+
+  // Modal: Add / Edit Single Video in Playlist
+  function openPlaylistVideoModal(playlistLessonId, videoRecordId = null) {
+    let targetLesson = null;
+    for (const c of state.courses) {
+      for (const m of (c.modules || [])) {
+        const l = (m.lessons || []).find(x => x.id === playlistLessonId);
+        if (l) { targetLesson = l; break; }
+      }
+      if (targetLesson) break;
+    }
+    if (!targetLesson) { notify("Playlist not found."); return; }
+
+    targetLesson.videos = Array.isArray(targetLesson.videos) ? targetLesson.videos : [];
+    $("#pvmPlaylistLessonId").value = playlistLessonId;
+    $("#pvmVideoRecordId").value = videoRecordId || "";
+
+    if (videoRecordId) {
+      const v = targetLesson.videos.find(x => x.id === videoRecordId);
+      if (!v) { notify("Video not found."); return; }
+      $("#pvmModalTitle").textContent = "Edit video in playlist";
+      $("#pvmTitleInput").value = v.title;
+      $("#pvmUrlInput").value = `https://www.youtube.com/watch?v=${v.videoId}`;
+      $("#pvmPreviewBox").innerHTML = `<img src="${thumb(v.videoId)}" alt=""><div><strong>Video recognized</strong><small>ID: ${v.videoId}</small></div>`;
+    } else {
+      $("#pvmModalTitle").textContent = `Add video to "${targetLesson.title}"`;
+      $("#pvmTitleInput").value = "";
+      $("#pvmUrlInput").value = "";
+      $("#pvmPreviewBox").innerHTML = '<div class="preview-placeholder">▶</div><div><strong>Video preview</strong><small>Paste a valid YouTube link</small></div>';
+    }
+
+    $("#playlistVideoModalOverlay").hidden = false;
+    $("#pvmUrlInput").focus();
+  }
+
+  function closePlaylistVideoModal() {
+    $("#playlistVideoModalOverlay").hidden = true;
+    $("#playlistVideoForm")?.reset();
+  }
+
+  $("#pvmModalClose")?.addEventListener("click", closePlaylistVideoModal);
+  $("#pvmCancelBtn")?.addEventListener("click", closePlaylistVideoModal);
+  $("#playlistVideoModalOverlay")?.addEventListener("click", e => {
+    if (e.target === $("#playlistVideoModalOverlay")) closePlaylistVideoModal();
+  });
+
+  $("#pvmUrlInput")?.addEventListener("input", () => {
+    const id = videoId($("#pvmUrlInput").value);
+    const box = $("#pvmPreviewBox");
+    if (!box) return;
+    box.innerHTML = id
+      ? `<img src="${thumb(id)}" alt=""><div><strong>Video recognized</strong><small>Thumbnail loaded · ID ${id}</small></div>`
+      : '<div class="preview-placeholder">▶</div><div><strong>Video preview</strong><small>Paste a valid YouTube link</small></div>';
+  });
+
+  $("#playlistVideoForm")?.addEventListener("submit", e => {
+    e.preventDefault();
+    const pLessonId = $("#pvmPlaylistLessonId").value;
+    const vRecordId = $("#pvmVideoRecordId").value;
+    const rawUrl = $("#pvmUrlInput").value;
+    const id = videoId(rawUrl);
+    const customTitle = $("#pvmTitleInput").value.trim();
+
+    if (!id) { notify("Enter a valid YouTube video URL or ID."); return; }
+
+    let targetLesson = null;
+    for (const c of state.courses) {
+      for (const m of (c.modules || [])) {
+        const l = (m.lessons || []).find(x => x.id === pLessonId);
+        if (l) { targetLesson = l; break; }
+      }
+      if (targetLesson) break;
+    }
+    if (!targetLesson) { notify("Playlist not found."); return; }
+    targetLesson.videos = Array.isArray(targetLesson.videos) ? targetLesson.videos : [];
+
+    if (vRecordId) {
+      const v = targetLesson.videos.find(x => x.id === vRecordId);
+      if (!v) { notify("Video not found."); return; }
+      v.videoId = id;
+      v.title = customTitle || v.title || `Video ${id}`;
+      save();
+      closePlaylistVideoModal();
+      notify("Video updated.");
+      if (currentLessonId === targetLesson.id && targetLesson.activeVideoRecordId === v.id) {
+        openLesson(targetLesson.id, v.id);
+      } else if (currentLessonId === targetLesson.id) {
+        renderPlaylistSidePanel(targetLesson, $("#sidePlaylistSearch")?.value);
+      }
+    } else {
+      const newV = {
+        id: uid(),
+        videoId: id,
+        title: customTitle || `Video ${targetLesson.videos.length + 1}`,
+        completed: false,
+        addedAt: new Date().toISOString()
+      };
+      targetLesson.videos.push(newV);
+      save();
+      closePlaylistVideoModal();
+      notify("Video added to playlist.");
+      if (currentLessonId === targetLesson.id) {
+        renderPlaylistSidePanel(targetLesson, $("#sidePlaylistSearch")?.value);
+        if (targetLesson.videos.length === 1) {
+          openLesson(targetLesson.id, newV.id);
+        }
+      }
+    }
+    renderManagement();
+  });
+
+  // Modal: Batch Paste Videos into Playlist
+  function openPlaylistPasteModal(playlistLessonId) {
+    let targetLesson = null;
+    for (const c of state.courses) {
+      for (const m of (c.modules || [])) {
+        const l = (m.lessons || []).find(x => x.id === playlistLessonId);
+        if (l) { targetLesson = l; break; }
+      }
+      if (targetLesson) break;
+    }
+    if (!targetLesson) { notify("Playlist not found."); return; }
+
+    $("#ppmPlaylistLessonId").value = playlistLessonId;
+    $("#ppmModalTitle").textContent = `Paste videos for "${targetLesson.title}"`;
+    $("#ppmUrlsInput").value = "";
+    $("#ppmCounter").textContent = "0 valid YouTube links detected";
+    $("#playlistPasteModalOverlay").hidden = false;
+    $("#ppmUrlsInput").focus();
+  }
+
+  function closePlaylistPasteModal() {
+    $("#playlistPasteModalOverlay").hidden = true;
+    $("#playlistPasteForm")?.reset();
+  }
+
+  $("#ppmModalClose")?.addEventListener("click", closePlaylistPasteModal);
+  $("#ppmCancelBtn")?.addEventListener("click", closePlaylistPasteModal);
+  $("#playlistPasteModalOverlay")?.addEventListener("click", e => {
+    if (e.target === $("#playlistPasteModalOverlay")) closePlaylistPasteModal();
+  });
+
+  $("#ppmUrlsInput")?.addEventListener("input", () => {
+    const lines = $("#ppmUrlsInput").value.split("\n").map(l => l.trim()).filter(Boolean);
+    const validCount = lines.filter(l => !!videoId(l)).length;
+    const counter = $("#ppmCounter");
+    if (counter) counter.textContent = `${validCount} valid YouTube link${validCount === 1 ? "" : "s"} detected (${lines.length} total lines)`;
+  });
+
+  $("#playlistPasteForm")?.addEventListener("submit", e => {
+    e.preventDefault();
+    const pLessonId = $("#ppmPlaylistLessonId").value;
+    const lines = $("#ppmUrlsInput").value.split("\n").map(l => l.trim()).filter(Boolean);
+    const validIds = lines.map(l => videoId(l)).filter(Boolean);
+
+    if (!validIds.length) { notify("No valid YouTube URLs found."); return; }
+
+    let targetLesson = null;
+    for (const c of state.courses) {
+      for (const m of (c.modules || [])) {
+        const l = (m.lessons || []).find(x => x.id === pLessonId);
+        if (l) { targetLesson = l; break; }
+      }
+      if (targetLesson) break;
+    }
+    if (!targetLesson) { notify("Playlist not found."); return; }
+    targetLesson.videos = Array.isArray(targetLesson.videos) ? targetLesson.videos : [];
+
+    let addedCount = 0;
+    validIds.forEach(id => {
+      targetLesson.videos.push({
+        id: uid(),
+        videoId: id,
+        title: `Video ${targetLesson.videos.length + 1}`,
+        completed: false,
+        addedAt: new Date().toISOString()
+      });
+      addedCount++;
+    });
+
+    save();
+    closePlaylistPasteModal();
+    notify(`Imported ${addedCount} videos into playlist.`);
+    if (currentLessonId === targetLesson.id) {
+      openLesson(targetLesson.id);
+    }
+    renderManagement();
+  });
 
   // Course Form
   $("#courseForm")?.addEventListener("submit",e=>{
@@ -1337,6 +1882,44 @@
     }
   });
 
+  $("#playlistVideosInput")?.addEventListener("input", () => {
+    const lines = ($("#playlistVideosInput").value || "").split("\n").map(l => l.trim()).filter(Boolean);
+    const count = lines.filter(l => !!videoId(l)).length;
+    const counter = $("#formPlaylistVideosCounter");
+    if (counter) counter.textContent = `${count} video${count === 1 ? "" : "s"} detected`;
+  });
+
+  $("#formFetchPlaylistBtn")?.addEventListener("click", async () => {
+    const urlVal = $("#playlistUrl")?.value.trim();
+    const info = parsePlaylist(urlVal);
+    if (!info || !info.playlistId) {
+      notify("Enter a valid YouTube playlist URL first.");
+      return;
+    }
+    const btn = $("#formFetchPlaylistBtn");
+    const origText = btn ? btn.textContent : "⚡ Fetch from YouTube";
+    if (btn) btn.textContent = "⏳ Fetching...";
+    notify("Fetching playlist videos from YouTube...");
+    try {
+      const fetched = await fetchPlaylistVideosFromYouTube(info.playlistId);
+      if (fetched && fetched.length > 0) {
+        const textarea = $("#playlistVideosInput");
+        if (textarea) {
+          textarea.value = fetched.map(v => `https://www.youtube.com/watch?v=${v.videoId}`).join("\n");
+          const counter = $("#formPlaylistVideosCounter");
+          if (counter) counter.textContent = `${fetched.length} videos detected`;
+        }
+        notify(`Found ${fetched.length} videos!`);
+      } else {
+        notify("YouTube blocked direct browser fetch. Paste video links manually in the box.");
+      }
+    } catch {
+      notify("Could not fetch videos from YouTube. Paste links in the box.");
+    } finally {
+      if (btn) btn.textContent = origText;
+    }
+  });
+
   $("#playlistForm")?.addEventListener("submit", e => {
     e.preventDefault();
     const c = state.courses.find(x => x.id === $("#playlistCourse").value);
@@ -1349,26 +1932,45 @@
     if (!mn) { notify("Enter a module name."); return; }
     if (!title) { notify("Enter a playlist title."); return; }
 
+    const vidLines = ($("#playlistVideosInput")?.value || "").split("\n").map(l => l.trim()).filter(Boolean);
+    const initialVideos = [];
+    vidLines.forEach((line, idx) => {
+      const vId = videoId(line);
+      if (vId && !initialVideos.some(x => x.videoId === vId)) {
+        initialVideos.push({
+          id: uid(),
+          videoId: vId,
+          title: `Video ${idx + 1}`,
+          completed: false,
+          addedAt: new Date().toISOString()
+        });
+      }
+    });
+
     let m = c.modules.find(x => x.name.toLowerCase() === mn.toLowerCase());
     if (!m) {
       m = { id: uid(), name: mn, lessons: [] };
       c.modules.push(m);
     }
 
+    const firstVidId = initialVideos.length > 0 ? initialVideos[0].videoId : (info.videoId || "videoseries");
     m.lessons.push({
       id: uid(),
       isPlaylist: true,
       playlistId: info.playlistId,
-      videoId: info.videoId || "videoseries",
+      videoId: firstVidId,
+      activeVideoRecordId: initialVideos.length > 0 ? initialVideos[0].id : null,
       title: title,
       completed: false,
-      addedAt: new Date().toISOString()
+      addedAt: new Date().toISOString(),
+      videos: initialVideos
     });
 
     $("#playlistForm").reset();
     $("#playlistPreview").innerHTML = '<div class="preview-placeholder" style="background:#262238;color:#b9adff">≡</div><div><strong>Playlist preview</strong><small>Paste a YouTube playlist URL (contains ?list=PL...).</small></div>';
+    if ($("#formPlaylistVideosCounter")) $("#formPlaylistVideosCounter").textContent = "0 videos detected";
     save();
-    notify("Playlist added to course.");
+    notify(`Playlist "${title}" added to course (${initialVideos.length} videos).`);
   });
 
   // Batch URLs Form
@@ -1977,6 +2579,69 @@
     const delDoc = e.target.closest("[data-delete-doc]");
     if (delDoc) { handleDeleteDoc(delDoc.dataset.deleteDoc); return; }
 
+    // Playlist expanded sublist toggles & actions
+    const toggleExp = e.target.closest("[data-toggle-playlist-expand]");
+    if (toggleExp) {
+      const lid = toggleExp.dataset.togglePlaylistExpand;
+      if (expandedPlaylistIds.has(lid)) expandedPlaylistIds.delete(lid);
+      else expandedPlaylistIds.add(lid);
+      renderManagement();
+      return;
+    }
+
+    const addVidPl = e.target.closest("[data-add-vid-playlist]");
+    if (addVidPl) {
+      const [cid, mid, lid] = addVidPl.dataset.addVidPlaylist.split("|");
+      openPlaylistVideoModal(lid);
+      return;
+    }
+
+    const pasteVidsPl = e.target.closest("[data-paste-vids-playlist]");
+    if (pasteVidsPl) {
+      const [cid, mid, lid] = pasteVidsPl.dataset.pasteVidsPlaylist.split("|");
+      openPlaylistPasteModal(lid);
+      return;
+    }
+
+    const playPvid = e.target.closest("[data-play-pvid]");
+    if (playPvid) {
+      const [cid, lid, pvid] = playPvid.dataset.playPvid.split("|");
+      openCourse(cid, lid);
+      openLesson(lid, pvid);
+      navigate("player");
+      return;
+    }
+
+    const editPvid = e.target.closest("[data-edit-pvid]");
+    if (editPvid) {
+      const [cid, mid, lid, pvid] = editPvid.dataset.editPvid.split("|");
+      openPlaylistVideoModal(lid, pvid);
+      return;
+    }
+
+    const delPvid = e.target.closest("[data-delete-pvid]");
+    if (delPvid) {
+      const [cid, mid, lid, pvid] = delPvid.dataset.deletePvid.split("|");
+      const c = state.courses.find(x => x.id === cid), m = c?.modules.find(x => x.id === mid);
+      const l = m?.lessons.find(x => x.id === lid);
+      if (l && Array.isArray(l.videos)) {
+        const v = l.videos.find(x => x.id === pvid);
+        if (v && confirm(`Remove "${v.title}" from this playlist?`)) {
+          l.videos = l.videos.filter(x => x.id !== pvid);
+          if (l.activeVideoRecordId === pvid) {
+            l.activeVideoRecordId = l.videos.length > 0 ? l.videos[0].id : null;
+          }
+          save();
+          renderManagement();
+          if (currentLessonId === l.id) {
+            openLesson(l.id, l.activeVideoRecordId);
+          }
+          notify("Video removed from playlist.");
+        }
+      }
+      return;
+    }
+
     // Edit Video or Playlist in Course
     const editContent = e.target.closest("[data-edit-content]");
     if (editContent) {
@@ -2032,6 +2697,8 @@
   // Keyboard navigation & accessibility
   document.addEventListener("keydown", e => {
     if (e.key === "Escape") {
+      if (!$("#playlistVideoModalOverlay")?.hidden) { closePlaylistVideoModal(); return; }
+      if (!$("#playlistPasteModalOverlay")?.hidden) { closePlaylistPasteModal(); return; }
       if (!$("#editContentModalOverlay")?.hidden) { closeEditContentModal(); return; }
       if (!$("#docPdfViewModal")?.hidden) { closePdfViewer(); return; }
       if (!$("#docNoteViewModal")?.hidden) { closeNoteViewer(); return; }
@@ -2049,6 +2716,19 @@
   $("#completeButton")?.addEventListener("click", () => {
     const c = state.courses.find(x => x.id === currentCourseId), l = c && lessons(c).find(x => x.id === currentLessonId);
     if (!l) return;
+
+    if (l.isPlaylist && l.activeVideoRecordId && Array.isArray(l.videos)) {
+      const v = l.videos.find(x => x.id === l.activeVideoRecordId);
+      if (v) {
+        v.completed = !v.completed;
+        l.completed = l.videos.length > 0 && l.videos.every(x => x.completed);
+        save();
+        openLesson(l.id, v.id);
+        notify(v.completed ? "Video marked complete." : "Video marked incomplete.");
+        return;
+      }
+    }
+
     l.completed = !l.completed; save(); openLesson(l.id); notify(l.completed ? "Marked complete." : "Completion undone.");
   });
 

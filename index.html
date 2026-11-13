@@ -114,6 +114,16 @@
               <label for="playlistTitle">Playlist title <span class="required">*</span></label><input id="playlistTitle" maxlength="120" placeholder="e.g. Complete React &amp; Next.js Masterclass" required>
               <label for="playlistUrl">YouTube playlist URL or ID</label><div class="url-input"><input id="playlistUrl" type="url" placeholder="https://www.youtube.com/playlist?list=PL..." required><span style="background:#29243c;color:#b9adff">PL</span></div>
               <div class="video-preview" id="playlistPreview"><div class="preview-placeholder" style="background:#262238;color:#b9adff">≡</div><div><strong>Playlist preview</strong><small>Paste a YouTube playlist URL (contains ?list=PL...).</small></div></div>
+
+              <div class="playlist-vids-input-block" style="margin-top:14px">
+                <label for="playlistVideosInput">Videos in this playlist <span class="optional">Optional — paste links or fetch</span></label>
+                <textarea id="playlistVideosInput" rows="3" placeholder="Paste YouTube watch URLs (one per line) or click fetch below"></textarea>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;gap:8px">
+                  <button type="button" class="secondary-button" id="formFetchPlaylistBtn" style="padding:6px 11px;font-size:11px">⚡ Fetch from YouTube</button>
+                  <span class="muted small" id="formPlaylistVideosCounter">0 videos detected</span>
+                </div>
+              </div>
+
               <button class="primary-button full" type="submit">Add playlist to course <span>＋</span></button>
             </form>
 
@@ -141,7 +151,46 @@
             <div class="lesson-heading"><div><p class="eyebrow" id="playerModuleLabel">NOW LEARNING</p><h1 id="playerLessonTitle">Choose a lesson</h1><p class="muted" id="playerLessonMeta">Your progress is saved automatically on this device.</p></div><div class="player-actions"><div class="study-timer"><span class="timer-dot" id="timerDot"></span><strong id="studyTimerDisplay">00:00:00</strong><button class="timer-button" id="studyTimerToggle" type="button">Start study</button></div><button class="mini-button" id="playerCoursePicsBtn" type="button" title="View or add pictures for this course" style="padding:10px 12px;font-weight:700">🖼 Pictures</button><button class="mini-button" id="playerCourseNotesBtn" type="button" title="View or create notes & PDFs for this course" style="padding:10px 12px;font-weight:700">✎ Notes &amp; PDFs</button><button class="complete-button" id="completeButton">✓ Mark complete</button></div></div>
             <div class="panel lesson-note"><h3>Stay focused</h3><p>Keep this space for the lesson. When you're finished, mark it complete and move to the next one.</p></div>
           </div>
-          <aside class="panel curriculum"><div class="curriculum-header"><div><p class="eyebrow">COURSE CONTENT</p><h3 id="curriculumTitle">Curriculum</h3></div><span class="progress-number" id="curriculumProgress">0%</span></div><div class="progress-track"><span id="curriculumBar"></span></div><div id="curriculumList" class="curriculum-list"></div></aside>
+          <aside class="panel curriculum" id="playerSidebar">
+            <div class="sidebar-tabs" id="playerSidebarTabs">
+              <button type="button" class="sidebar-tab active" id="tabCurriculumBtn" data-side-tab="curriculum">📚 Curriculum</button>
+              <button type="button" class="sidebar-tab" id="tabPlaylistBtn" data-side-tab="playlist" hidden>📑 Playlist (<span id="sidePlaylistCount">0</span>)</button>
+            </div>
+
+            <!-- Course Curriculum View -->
+            <div id="sideCurriculumView">
+              <div class="curriculum-header">
+                <div>
+                  <p class="eyebrow">COURSE CONTENT</p>
+                  <h3 id="curriculumTitle">Curriculum</h3>
+                </div>
+                <span class="progress-number" id="curriculumProgress">0%</span>
+              </div>
+              <div class="progress-track"><span id="curriculumBar"></span></div>
+              <div id="curriculumList" class="curriculum-list"></div>
+            </div>
+
+            <!-- Dedicated Playlist Side Panel View -->
+            <div id="sidePlaylistView" hidden>
+              <div class="playlist-side-header">
+                <div class="playlist-side-info">
+                  <p class="eyebrow" id="sidePlaylistEyebrow">ACTIVE PLAYLIST</p>
+                  <h3 id="sidePlaylistTitle">Playlist Videos</h3>
+                  <span class="muted small" id="sidePlaylistMeta">0 videos · 0 completed</span>
+                </div>
+                <div class="playlist-side-actions">
+                  <button type="button" class="mini-btn-action" id="sidePlayFullBtn" title="Play full continuous playlist series">≡ Series</button>
+                  <button type="button" class="mini-btn-action" id="sideAddVidBtn" title="Add video to this playlist">＋ Add</button>
+                  <button type="button" class="mini-btn-action" id="sidePasteVidsBtn" title="Paste multiple video URLs">📋 Paste</button>
+                  <button type="button" class="mini-btn-action" id="sideFetchVidsBtn" title="Try auto-fetching video list from YouTube">⚡ Fetch</button>
+                </div>
+              </div>
+              <div class="playlist-side-search">
+                <input type="text" id="sidePlaylistSearch" placeholder="Filter videos in playlist..." autocomplete="off">
+              </div>
+              <div class="playlist-side-list" id="sidePlaylistList"></div>
+            </div>
+          </aside>
         </div>
       </section>
 
@@ -680,6 +729,72 @@
         <div class="pic-modal-actions">
           <button type="button" class="secondary-button" id="editContentCancelBtn">Cancel</button>
           <button type="submit" class="primary-button" id="editContentSaveBtn">Save changes <span>✓</span></button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add / Edit Single Video in Playlist Modal -->
+  <div class="pic-modal-overlay" id="playlistVideoModalOverlay" hidden>
+    <div class="pic-modal" role="dialog" aria-modal="true" aria-labelledby="pvmModalTitle">
+      <div class="pic-modal-head">
+        <h3 id="pvmModalTitle">Add video to playlist</h3>
+        <button type="button" class="modal-close-btn" id="pvmModalClose" aria-label="Close dialog">✕</button>
+      </div>
+      <form id="playlistVideoForm" class="pic-modal-form">
+        <input type="hidden" id="pvmCourseId">
+        <input type="hidden" id="pvmModuleId">
+        <input type="hidden" id="pvmPlaylistLessonId">
+        <input type="hidden" id="pvmVideoRecordId">
+
+        <div>
+          <label for="pvmTitleInput">Video title <span class="optional">Optional</span></label>
+          <input type="text" id="pvmTitleInput" maxlength="120" placeholder="e.g. Lesson 1: Introduction">
+        </div>
+
+        <div>
+          <label for="pvmUrlInput">YouTube video URL or ID <span class="required">*</span></label>
+          <div class="url-input">
+            <input type="url" id="pvmUrlInput" placeholder="https://www.youtube.com/watch?v=..." required>
+            <span>YT</span>
+          </div>
+        </div>
+
+        <div class="video-preview" id="pvmPreviewBox">
+          <div class="preview-placeholder">▶</div>
+          <div><strong>Video preview</strong><small>Paste a valid YouTube link</small></div>
+        </div>
+
+        <div class="pic-modal-actions">
+          <button type="button" class="secondary-button" id="pvmCancelBtn">Cancel</button>
+          <button type="submit" class="primary-button" id="pvmSaveBtn">Save video <span>✓</span></button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Batch Paste Videos into Playlist Modal -->
+  <div class="pic-modal-overlay" id="playlistPasteModalOverlay" hidden>
+    <div class="pic-modal" role="dialog" aria-modal="true" aria-labelledby="ppmModalTitle">
+      <div class="pic-modal-head">
+        <h3 id="ppmModalTitle">Paste videos for playlist</h3>
+        <button type="button" class="modal-close-btn" id="ppmModalClose" aria-label="Close dialog">✕</button>
+      </div>
+      <form id="playlistPasteForm" class="pic-modal-form">
+        <input type="hidden" id="ppmCourseId">
+        <input type="hidden" id="ppmModuleId">
+        <input type="hidden" id="ppmPlaylistLessonId">
+
+        <div>
+          <label for="ppmUrlsInput">YouTube URLs or watch links <span class="optional">One per line</span></label>
+          <textarea id="ppmUrlsInput" rows="6" placeholder="https://www.youtube.com/watch?v=...&#10;https://www.youtube.com/watch?v=...&#10;https://youtu.be/..." required></textarea>
+        </div>
+
+        <div class="small muted" id="ppmCounter" style="margin:4px 0 10px">0 valid YouTube links detected</div>
+
+        <div class="pic-modal-actions">
+          <button type="button" class="secondary-button" id="ppmCancelBtn">Cancel</button>
+          <button type="submit" class="primary-button" id="ppmSubmitBtn">Import videos <span>＋</span></button>
         </div>
       </form>
     </div>
