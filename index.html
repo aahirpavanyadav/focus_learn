@@ -19,7 +19,7 @@
         <button class="nav-item" data-page="courses"><span class="nav-icon">▤</span>My courses</button>
         <button class="nav-item" data-page="analytics"><span class="nav-icon">◷</span>Analytics</button>
         <button class="nav-item" data-page="pictures"><span class="nav-icon">🖼</span>Pictures</button>
-        <button class="nav-item" data-page="notes"><span class="nav-icon">✎</span>My Notes</button>
+        <button class="nav-item" data-page="notes"><span class="nav-icon">✎</span>Notes &amp; PDFs</button>
         <button class="nav-item" data-page="settings"><span class="nav-icon">⚙</span>Settings</button>
       </nav>
       <div class="sidebar-bottom">
@@ -45,6 +45,7 @@
           <article class="stat-card"><span class="stat-icon green">✓</span><div><small>Lessons completed</small><strong id="statCompleted">0</strong></div></article>
           <article class="stat-card"><span class="stat-icon amber">◷</span><div><small>Overall progress</small><strong id="statProgress">0%</strong></div></article>
           <article class="stat-card" style="cursor:pointer;" data-go="pictures"><span class="stat-icon purple">🖼</span><div><small>Saved pictures</small><strong id="statPictures">0</strong></div></article>
+          <article class="stat-card" style="cursor:pointer;" data-go="notes"><span class="stat-icon purple">✎</span><div><small>Notes &amp; PDFs</small><strong id="statDocs">0</strong></div></article>
         </div>
         <div class="section-heading"><div><p class="eyebrow">YOUR LIBRARY</p><h2>Continue learning</h2></div><button class="text-button" data-go="courses">Manage courses <span>→</span></button></div>
         <div class="course-grid" id="dashboardCourses"></div>
@@ -109,7 +110,7 @@
         <div class="player-layout">
           <div class="player-main">
             <div class="video-frame" id="videoFrame"><div class="player-placeholder">Select a lesson to begin</div></div>
-            <div class="lesson-heading"><div><p class="eyebrow" id="playerModuleLabel">NOW LEARNING</p><h1 id="playerLessonTitle">Choose a lesson</h1><p class="muted" id="playerLessonMeta">Your progress is saved automatically on this device.</p></div><div class="player-actions"><div class="study-timer"><span class="timer-dot" id="timerDot"></span><strong id="studyTimerDisplay">00:00:00</strong><button class="timer-button" id="studyTimerToggle" type="button">Start study</button></div><button class="mini-button" id="playerCoursePicsBtn" type="button" title="View or add pictures for this course" style="padding:10px 12px;font-weight:700">🖼 Pictures</button><button class="complete-button" id="completeButton">✓ Mark complete</button></div></div>
+            <div class="lesson-heading"><div><p class="eyebrow" id="playerModuleLabel">NOW LEARNING</p><h1 id="playerLessonTitle">Choose a lesson</h1><p class="muted" id="playerLessonMeta">Your progress is saved automatically on this device.</p></div><div class="player-actions"><div class="study-timer"><span class="timer-dot" id="timerDot"></span><strong id="studyTimerDisplay">00:00:00</strong><button class="timer-button" id="studyTimerToggle" type="button">Start study</button></div><button class="mini-button" id="playerCoursePicsBtn" type="button" title="View or add pictures for this course" style="padding:10px 12px;font-weight:700">🖼 Pictures</button><button class="mini-button" id="playerCourseNotesBtn" type="button" title="View or create notes & PDFs for this course" style="padding:10px 12px;font-weight:700">✎ Notes &amp; PDFs</button><button class="complete-button" id="completeButton">✓ Mark complete</button></div></div>
             <div class="panel lesson-note"><h3>Stay focused</h3><p>Keep this space for the lesson. When you're finished, mark it complete and move to the next one.</p></div>
           </div>
           <aside class="panel curriculum"><div class="curriculum-header"><div><p class="eyebrow">COURSE CONTENT</p><h3 id="curriculumTitle">Curriculum</h3></div><span class="progress-number" id="curriculumProgress">0%</span></div><div class="progress-track"><span id="curriculumBar"></span></div><div id="curriculumList" class="curriculum-list"></div></aside>
@@ -170,24 +171,149 @@
       </section>
 
       <section class="page notes-page" id="page-notes">
-        <div class="notes-toolbar">
-          <div><p class="eyebrow">YOUR WRITING WORKSPACE</p><h1>My Notes</h1><p class="muted">Your existing notes app, opened inside FocusLearn.</p></div>
-          <a class="primary-button notes-open-link" href="https://aahirpavanyadav.github.io/My-notes/" target="_blank" rel="noopener noreferrer">Open in new tab ↗</a>
+        <div class="welcome-row">
+          <div>
+            <p class="eyebrow">DOCUMENT &amp; KNOWLEDGE VAULT</p>
+            <h1>Notes &amp; PDF Library</h1>
+            <p class="muted">Create study notes, store lecture PDFs, and organize course materials on this device.</p>
+          </div>
+          <div class="header-actions">
+            <button class="secondary-button" id="openAddNoteBtn" type="button">＋ Create note</button>
+            <button class="primary-button" id="openAddPdfBtn" type="button">＋ Upload PDF</button>
+          </div>
         </div>
-        <div class="notes-embed-shell" style="display:block;width:100%;height:76vh;min-height:650px;max-height:900px;position:relative;overflow:hidden;border:1px solid #292c34;border-radius:10px;background:#fff;">
-          <iframe id="notesFrame" src="https://aahirpavanyadav.github.io/My-notes/" title="My Notes workspace" loading="eager" referrerpolicy="strict-origin-when-cross-origin" width="100%" height="100%" style="display:block;width:100%;height:100%;min-height:650px;border:0;background:#fff;" allow="clipboard-read; clipboard-write"></iframe>
+
+        <!-- Document Tabs -->
+        <div class="doc-nav-tabs">
+          <button type="button" class="doc-tab active" data-doc-tab="all">📑 All items (<span id="tabCountAll">0</span>)</button>
+          <button type="button" class="doc-tab" data-doc-tab="notes">✎ Notes (<span id="tabCountNotes">0</span>)</button>
+          <button type="button" class="doc-tab" data-doc-tab="pdfs">📄 PDFs (<span id="tabCountPdfs">0</span>)</button>
+          <button type="button" class="doc-tab" data-doc-tab="creator">✍️ Write note</button>
+          <button type="button" class="doc-tab" data-doc-tab="external">🌐 External My Notes</button>
         </div>
-        <div class="notes-disclaimer" style="margin-top:12px;padding:12px 14px;border:1px solid #292c34;border-radius:8px;background:#17191e;color:#a5a9b3;">Your notes remain saved by My Notes in its own browser storage. Use its Export option to back them up. If the embedded editor does not load, <a href="https://aahirpavanyadav.github.io/My-notes/" target="_blank" rel="noopener noreferrer" style="color:#b9adff;text-decoration:none;">open My Notes in a new tab ↗</a>.</div>
+
+        <!-- Items View (All, Notes, PDFs) -->
+        <div id="docListView" class="doc-tab-content">
+          <div class="pic-toolbar doc-toolbar">
+            <div class="pic-search-box">
+              <span class="search-icon">🔍</span>
+              <input type="text" id="docSearchInput" placeholder="Search notes and PDFs by title, content, or details..." autocomplete="off">
+              <button type="button" class="clear-search-btn" id="docClearSearch" hidden title="Clear search">✕</button>
+            </div>
+            <div class="pic-filters">
+              <select id="docCategoryFilter" aria-label="Filter by category">
+                <option value="">All categories</option>
+                <option value="Lecture Notes">Lecture Notes</option>
+                <option value="Summary">Summary</option>
+                <option value="Textbook">Textbook</option>
+                <option value="Slides">Slides</option>
+                <option value="Cheatsheet">Cheatsheet</option>
+                <option value="Formula Sheet">Formula Sheet</option>
+                <option value="Research Paper">Research Paper</option>
+                <option value="Assignment">Assignment</option>
+                <option value="Revision">Revision</option>
+                <option value="Other">Other</option>
+              </select>
+              <select id="docCourseFilter" aria-label="Filter by course">
+                <option value="">All courses</option>
+              </select>
+              <select id="docSortOrder" aria-label="Sort order">
+                <option value="newest">Newest first</option>
+                <option value="oldest">Oldest first</option>
+                <option value="title">Title (A-Z)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="pic-status-row">
+            <span class="muted small" id="docCountLabel">0 items</span>
+            <span class="pic-hint-pill">🔒 Stored locally in browser IndexedDB</span>
+          </div>
+
+          <div class="doc-grid" id="documentsGrid"></div>
+
+          <div class="empty-state" id="documentsEmpty">
+            <div class="empty-art">📑</div>
+            <h3>No notes or PDFs stored yet</h3>
+            <p>Create your first study note or upload a lecture PDF to build your offline knowledge vault.</p>
+            <div style="display:flex;gap:10px;justify-content:center;margin-top:14px;flex-wrap:wrap">
+              <button class="secondary-button" id="emptyAddNoteBtn" type="button">＋ Create note</button>
+              <button class="primary-button" id="emptyAddPdfBtn" type="button">＋ Upload PDF</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- In-page Direct Note Creator Tab -->
+        <div id="docCreatorView" class="doc-tab-content" hidden>
+          <div class="panel note-creator-card">
+            <div class="panel-title">
+              <div><span class="step">✎</span><h3>Write study note</h3></div>
+              <span class="muted small">Notes are saved directly into your FocusLearn library</span>
+            </div>
+            <form id="quickNoteForm" class="quick-note-form">
+              <div class="pic-form-grid">
+                <div>
+                  <label for="qNoteTitle">Note title <span class="required">*</span></label>
+                  <input type="text" id="qNoteTitle" maxlength="120" placeholder="e.g. Asynchronous JavaScript &amp; Promises" required>
+                </div>
+                <div>
+                  <label for="qNoteCategory">Category</label>
+                  <select id="qNoteCategory">
+                    <option value="Lecture Notes">Lecture Notes</option>
+                    <option value="Summary">Summary</option>
+                    <option value="Formula Sheet">Formula Sheet</option>
+                    <option value="Cheatsheet">Cheatsheet</option>
+                    <option value="Revision">Revision</option>
+                    <option value="Assignment">Assignment</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+              </div>
+              <div class="pic-form-grid">
+                <div>
+                  <label for="qNoteCourse">Link to course <span class="optional">Optional</span></label>
+                  <select id="qNoteCourse"><option value="">None (General)</option></select>
+                </div>
+                <div>
+                  <label for="qNoteDetails">Note details / Key takeaway <span class="optional">Optional</span></label>
+                  <input type="text" id="qNoteDetails" maxlength="200" placeholder="Brief summary, key formula, or takeaway">
+                </div>
+              </div>
+              <div>
+                <label for="qNoteContent">Note content <span class="required">*</span></label>
+                <textarea id="qNoteContent" rows="12" placeholder="Write your study notes, code snippets, definitions, formulas, or bullet points here..." required></textarea>
+              </div>
+              <div class="note-creator-actions">
+                <button type="reset" class="secondary-button">Clear</button>
+                <button type="submit" class="primary-button">Save note to library <span>→</span></button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- External My Notes Embed Tab -->
+        <div id="docExternalView" class="doc-tab-content" hidden>
+          <div class="notes-toolbar" style="margin-bottom:12px">
+            <p class="muted small" style="margin:0">External notes app opened inside FocusLearn.</p>
+            <a class="primary-button notes-open-link" href="https://aahirpavanyadav.github.io/My-notes/" target="_blank" rel="noopener noreferrer">Open in new tab ↗</a>
+          </div>
+          <div class="notes-embed-shell" style="display:block;width:100%;height:74vh;min-height:600px;max-height:900px;position:relative;overflow:hidden;border:1px solid #292c34;border-radius:10px;background:#fff;">
+            <iframe id="notesFrame" src="https://aahirpavanyadav.github.io/My-notes/" title="My Notes workspace" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" width="100%" height="100%" style="display:block;width:100%;height:100%;min-height:600px;border:0;background:#fff;" allow="clipboard-read; clipboard-write"></iframe>
+          </div>
+          <div class="notes-disclaimer" style="margin-top:12px;padding:12px 14px;border:1px solid #292c34;border-radius:8px;background:#17191e;color:#a5a9b3;">
+            My Notes is an external site with separate browser storage. Use the "Notes" tab above to store notes directly inside FocusLearn.
+          </div>
+        </div>
       </section>
 
       <section class="page" id="page-settings">
         <div class="page-heading"><p class="eyebrow">YOUR DATA, YOUR CONTROL</p><h1>Settings</h1><p class="muted">Your library stays in this browser. Export a backup whenever you need it.</p></div>
         <div class="settings-grid">
-          <div class="panel settings-card"><div class="settings-symbol purple">⇧</div><h3>Export your library</h3><p>Download all courses, lessons, completion progress, and saved pictures as a JSON backup.</p><button class="primary-button" id="exportButton">Download backup <span>↓</span></button></div>
-          <div class="panel settings-card"><div class="settings-symbol green">⇩</div><h3>Import a backup</h3><p>Restore a previously exported FocusLearn JSON file (including courses and saved pictures). This replaces the current library.</p><label class="secondary-button file-button" for="importFile">Choose JSON file</label><input type="file" id="importFile" accept=".json,application/json" hidden></div>
-          <div class="panel settings-card danger-card"><div class="settings-symbol red">⌫</div><h3>Reset your library</h3><p>Permanently clear all courses, progress, and saved pictures stored in this browser.</p><button class="danger-button" id="resetButton">Delete all data</button></div>
+          <div class="panel settings-card"><div class="settings-symbol purple">⇧</div><h3>Export your library</h3><p>Download all courses, lessons, progress, saved pictures, notes, and PDFs as a JSON backup.</p><button class="primary-button" id="exportButton">Download backup <span>↓</span></button></div>
+          <div class="panel settings-card"><div class="settings-symbol green">⇩</div><h3>Import a backup</h3><p>Restore a previously exported FocusLearn JSON file (including courses, pictures, notes, and PDFs). This replaces the current library.</p><label class="secondary-button file-button" for="importFile">Choose JSON file</label><input type="file" id="importFile" accept=".json,application/json" hidden></div>
+          <div class="panel settings-card danger-card"><div class="settings-symbol red">⌫</div><h3>Reset your library</h3><p>Permanently clear all courses, progress, saved pictures, notes, and PDFs stored in this browser.</p><button class="danger-button" id="resetButton">Delete all data</button></div>
         </div>
-        <div class="privacy-note"><span>🔒</span><div><strong>Private by design</strong><p>FocusLearn has no account or backend. Courses, progress, study sessions, and visual pictures are stored locally in this browser. My Notes is a separate website with separate browser storage. YouTube playback is embedded from YouTube.</p></div></div>
+        <div class="privacy-note"><span>🔒</span><div><strong>Private by design</strong><p>FocusLearn has no account or backend. Courses, progress, study sessions, visual pictures, created notes, and PDFs are stored locally in this browser. My Notes is a separate website with separate browser storage. YouTube playback is embedded from YouTube.</p></div></div>
       </section>
       <footer class="footer">FOCUSLEARN <span>·</span> A quieter way to learn.</footer>
     </main>
@@ -294,6 +420,194 @@
         <div class="lightbox-side-footer">
           <button type="button" class="mini-button edit" id="lightboxEditBtn">✎ Edit details &amp; pic</button>
           <button type="button" class="mini-button delete" id="lightboxDeleteBtn">⌫ Delete</button>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- Add/Edit Note Modal -->
+  <div class="pic-modal-overlay" id="docNoteModalOverlay" hidden>
+    <div class="pic-modal" role="dialog" aria-modal="true" aria-labelledby="docNoteModalTitle">
+      <div class="pic-modal-head">
+        <h3 id="docNoteModalTitle">Create study note</h3>
+        <button type="button" class="modal-close-btn" id="docNoteModalClose" aria-label="Close dialog">✕</button>
+      </div>
+      <form id="docNoteForm" class="pic-modal-form">
+        <input type="hidden" id="docNoteId">
+        <div class="pic-form-grid">
+          <div>
+            <label for="docNoteTitle">Note title <span class="required">*</span></label>
+            <input type="text" id="docNoteTitle" maxlength="120" placeholder="e.g. Binary Search Tree Properties" required>
+          </div>
+          <div>
+            <label for="docNoteCategory">Category</label>
+            <select id="docNoteCategory">
+              <option value="Lecture Notes">Lecture Notes</option>
+              <option value="Summary">Summary</option>
+              <option value="Formula Sheet">Formula Sheet</option>
+              <option value="Cheatsheet">Cheatsheet</option>
+              <option value="Revision">Revision</option>
+              <option value="Assignment">Assignment</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="pic-form-grid">
+          <div>
+            <label for="docNoteCourse">Link to course <span class="optional">Optional</span></label>
+            <select id="docNoteCourse"><option value="">None (General)</option></select>
+          </div>
+          <div>
+            <label for="docNoteDetails">Note details / Key takeaway <span class="optional">Optional</span></label>
+            <input type="text" id="docNoteDetails" maxlength="200" placeholder="Short summary or key takeaway">
+          </div>
+        </div>
+
+        <div>
+          <label for="docNoteContent">Note content <span class="required">*</span></label>
+          <textarea id="docNoteContent" rows="8" placeholder="Type your full study notes, equations, bullet points, or reference notes..." required></textarea>
+        </div>
+
+        <div class="pic-modal-actions">
+          <button type="button" class="secondary-button" id="docNoteCancelBtn">Cancel</button>
+          <button type="submit" class="primary-button" id="docNoteSubmitBtn">Save note <span>→</span></button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add/Edit PDF Modal -->
+  <div class="pic-modal-overlay" id="docPdfModalOverlay" hidden>
+    <div class="pic-modal" role="dialog" aria-modal="true" aria-labelledby="docPdfModalTitle">
+      <div class="pic-modal-head">
+        <h3 id="docPdfModalTitle">Upload PDF document</h3>
+        <button type="button" class="modal-close-btn" id="docPdfModalClose" aria-label="Close dialog">✕</button>
+      </div>
+      <form id="docPdfForm" class="pic-modal-form">
+        <input type="hidden" id="docPdfId">
+        
+        <div>
+          <label id="docPdfFileLabel">PDF file <span class="required">*</span></label>
+          <div class="pic-dropzone" id="docPdfDropZone" tabindex="0">
+            <input type="file" id="docPdfFileInput" accept=".pdf,application/pdf" hidden>
+            <div class="dropzone-empty" id="docPdfDropEmpty">
+              <span class="dropzone-icon">📄</span>
+              <strong>Click to browse or drag &amp; drop a PDF file</strong>
+              <small>Standard .pdf documents</small>
+            </div>
+            <div class="dropzone-preview" id="docPdfDropPreview" hidden>
+              <div class="pdf-preview-chip">
+                <span style="font-size:24px">📄</span>
+                <div>
+                  <strong id="docPdfPreviewName" style="display:block;font-size:12px;overflow-wrap:anywhere"></strong>
+                  <small id="docPdfPreviewInfo" class="muted"></small>
+                </div>
+              </div>
+              <button type="button" class="mini-button" id="docPdfChangeFileBtn" style="margin-top:8px">Change PDF file</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="pic-form-grid">
+          <div>
+            <label for="docPdfTitle">Document title <span class="required">*</span></label>
+            <input type="text" id="docPdfTitle" maxlength="120" placeholder="e.g. Discrete Math Lecture Slides Chapter 3" required>
+          </div>
+          <div>
+            <label for="docPdfCategory">Category</label>
+            <select id="docPdfCategory">
+              <option value="Lecture Slides">Lecture Slides</option>
+              <option value="Textbook">Textbook</option>
+              <option value="Research Paper">Research Paper</option>
+              <option value="Lecture Notes">Lecture Notes</option>
+              <option value="Cheatsheet">Cheatsheet</option>
+              <option value="Formula Sheet">Formula Sheet</option>
+              <option value="Syllabus">Syllabus</option>
+              <option value="Assignment">Assignment</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label for="docPdfCourse">Link to course <span class="optional">Optional</span></label>
+          <select id="docPdfCourse"><option value="">None (General)</option></select>
+        </div>
+
+        <div>
+          <label for="docPdfDetails">PDF details / Description <span class="optional">Optional</span></label>
+          <textarea id="docPdfDetails" rows="3" maxlength="2000" placeholder="Describe the topics, chapters, professor notes, or key sections covered in this PDF..."></textarea>
+        </div>
+
+        <div class="pic-modal-actions">
+          <button type="button" class="secondary-button" id="docPdfCancelBtn">Cancel</button>
+          <button type="submit" class="primary-button" id="docPdfSubmitBtn">Save PDF <span>→</span></button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Note Viewer Modal -->
+  <div class="pic-modal-overlay" id="docNoteViewModal" hidden>
+    <div class="pic-modal note-viewer-modal" role="dialog" aria-modal="true" aria-labelledby="viewNoteTitle">
+      <div class="pic-modal-head">
+        <div class="pic-badge-group">
+          <span class="pic-category-badge" id="viewNoteCategory">NOTE</span>
+          <span class="pic-course-badge" id="viewNoteCourse" hidden></span>
+        </div>
+        <button type="button" class="modal-close-btn" id="viewNoteClose" aria-label="Close note">✕</button>
+      </div>
+      <div class="note-viewer-body">
+        <h2 id="viewNoteTitle" class="note-viewer-title"></h2>
+        <small class="muted" id="viewNoteDate"></small>
+        <div class="note-viewer-details" id="viewNoteDetailsWrap">
+          <strong>SUMMARY / TAKEAWAYS:</strong>
+          <p id="viewNoteDetails"></p>
+        </div>
+        <div class="note-viewer-content" id="viewNoteContent"></div>
+      </div>
+      <div class="pic-modal-actions" style="margin:0;padding:14px 20px;background:#13151a;border-top:1px solid var(--line);justify-content:space-between">
+        <div style="display:flex;gap:7px">
+          <button type="button" class="mini-button" id="viewNoteCopyBtn">📋 Copy text</button>
+          <button type="button" class="mini-button" id="viewNoteDownloadBtn">⇩ Download .txt</button>
+        </div>
+        <div style="display:flex;gap:7px">
+          <button type="button" class="mini-button edit" id="viewNoteEditBtn">✎ Edit note</button>
+          <button type="button" class="mini-button delete" id="viewNoteDeleteBtn">⌫ Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PDF Fullscreen Viewer Modal -->
+  <div class="pic-lightbox-overlay" id="docPdfViewModal" hidden>
+    <div class="pic-lightbox pdf-lightbox-container" role="dialog" aria-modal="true" aria-labelledby="viewPdfTitle">
+      <div class="pic-lightbox-main pdf-lightbox-main">
+        <button type="button" class="lightbox-close-btn" id="viewPdfClose" aria-label="Close PDF viewer">✕</button>
+        <div class="pdf-frame-wrapper" id="pdfFrameWrapper">
+          <iframe id="pdfViewerFrame" src="" title="PDF Document Viewer" style="width:100%;height:100%;border:0;background:#1a1c22;"></iframe>
+        </div>
+        <div class="lightbox-img-bar">
+          <button type="button" class="mini-button" id="viewPdfDownloadBtn">⇩ Download original PDF</button>
+        </div>
+      </div>
+      <aside class="pic-lightbox-sidebar">
+        <div class="lightbox-side-head">
+          <div class="pic-badge-group">
+            <span class="pic-category-badge" id="viewPdfCategory">PDF</span>
+            <span class="pic-course-badge" id="viewPdfCourse" hidden></span>
+          </div>
+          <h2 id="viewPdfTitle"></h2>
+          <small class="muted" id="viewPdfDate"></small>
+        </div>
+        <div class="lightbox-details-wrap">
+          <label>PDF DETAILS &amp; SUMMARY</label>
+          <div class="lightbox-details-text" id="viewPdfDetails"></div>
+        </div>
+        <div class="lightbox-side-footer">
+          <button type="button" class="mini-button edit" id="viewPdfEditBtn">✎ Edit PDF details</button>
+          <button type="button" class="mini-button delete" id="viewPdfDeleteBtn">⌫ Delete</button>
         </div>
       </aside>
     </div>

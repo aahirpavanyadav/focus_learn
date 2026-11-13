@@ -2,8 +2,9 @@
   "use strict";
   const KEY = "focuslearn.v1";
   const DB_NAME = "focuslearn_db";
-  const DB_VERSION = 1;
-  const STORE_NAME = "pictures";
+  const DB_VERSION = 2;
+  const STORE_PICS = "pictures";
+  const STORE_DOCS = "documents";
 
   const $ = (s, root=document) => root.querySelector(s);
   const $$ = (s, root=document) => [...root.querySelectorAll(s)];
@@ -22,6 +23,21 @@
     sort: "newest"
   };
 
+  // Documents (Notes & PDFs) state
+  let docsList = [];
+  let currentViewingNoteId = null;
+  let currentViewingPdfId = null;
+  let currentPdfBlobUrl = null;
+  let editingDocId = null;
+  let stagedPdfData = null; // { pdfData, fileName, fileSize }
+  let docActiveTab = "all"; // "all" | "notes" | "pdfs" | "creator" | "external"
+  const docFilterState = {
+    search: "",
+    category: "",
+    courseId: "",
+    sort: "newest"
+  };
+
   function uid(){ return (globalThis.crypto && crypto.randomUUID) ? crypto.randomUUID() : Date.now().toString(36)+Math.random().toString(36).slice(2); }
   function load(){
     try {
@@ -34,57 +50,60 @@
   function save(){ persist(); renderAll(); }
   function notify(msg){ const el=$("#toast"); if(!el)return; el.textContent=msg; el.classList.add("show"); clearTimeout(toastTimer); toastTimer=setTimeout(()=>el.classList.remove("show"),2600); }
 
-  // IndexedDB client storage for pictures with localStorage fallback
+  // Shared IndexedDB connection for pictures and documents
+  let _dbInstance = null;
+  function getAppDB() {
+    if (_dbInstance) return Promise.resolve(_dbInstance);
+    if (!window.indexedDB) return Promise.resolve(null);
+    return new Promise((resolve) => {
+      try {
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains(STORE_PICS)) {
+            const pStore = db.createObjectStore(STORE_PICS, { keyPath: "id" });
+            pStore.createIndex("createdAt", "createdAt", { unique: false });
+            pStore.createIndex("category", "category", { unique: false });
+            pStore.createIndex("courseId", "courseId", { unique: false });
+          }
+          if (!db.objectStoreNames.contains(STORE_DOCS)) {
+            const dStore = db.createObjectStore(STORE_DOCS, { keyPath: "id" });
+            dStore.createIndex("type", "type", { unique: false });
+            dStore.createIndex("createdAt", "createdAt", { unique: false });
+            dStore.createIndex("category", "category", { unique: false });
+            dStore.createIndex("courseId", "courseId", { unique: false });
+          }
+        };
+        req.onsuccess = () => {
+          _dbInstance = req.result;
+          resolve(_dbInstance);
+        };
+        req.onerror = () => resolve(null);
+      } catch {
+        resolve(null);
+      }
+    });
+  }
+
+  // PicDB client storage
   const PicDB = {
-    _db: null,
-    async getDB() {
-      if (this._db) return this._db;
-      if (!window.indexedDB) return null;
-      return new Promise((resolve) => {
-        try {
-          const req = indexedDB.open(DB_NAME, DB_VERSION);
-          req.onupgradeneeded = (e) => {
-            const db = e.target.result;
-            if (!db.objectStoreNames.contains(STORE_NAME)) {
-              const store = db.createObjectStore(STORE_NAME, { keyPath: "id" });
-              store.createIndex("createdAt", "createdAt", { unique: false });
-              store.createIndex("category", "category", { unique: false });
-              store.createIndex("courseId", "courseId", { unique: false });
-            }
-          };
-          req.onsuccess = () => {
-            this._db = req.result;
-            resolve(this._db);
-          };
-          req.onerror = () => resolve(null);
-        } catch {
-          resolve(null);
-        }
-      });
-    },
     async getAll() {
-      const db = await this.getDB();
+      const db = await getAppDB();
       if (!db) {
-        try {
-          return JSON.parse(localStorage.getItem("focuslearn.pictures") || "[]");
-        } catch {
-          return [];
-        }
+        try { return JSON.parse(localStorage.getItem("focuslearn.pictures") || "[]"); } catch { return []; }
       }
       return new Promise((resolve) => {
         try {
-          const tx = db.transaction(STORE_NAME, "readonly");
-          const store = tx.objectStore(STORE_NAME);
+          const tx = db.transaction(STORE_PICS, "readonly");
+          const store = tx.objectStore(STORE_PICS);
           const req = store.getAll();
           req.onsuccess = () => resolve(req.result || []);
           req.onerror = () => resolve([]);
-        } catch {
-          resolve([]);
-        }
+        } catch { resolve([]); }
       });
     },
     async save(item) {
-      const db = await this.getDB();
+      const db = await getAppDB();
       if (!db) {
         try {
           const list = JSON.parse(localStorage.getItem("focuslearn.pictures") || "[]");
@@ -92,61 +111,126 @@
           if (idx >= 0) list[idx] = item; else list.push(item);
           localStorage.setItem("focuslearn.pictures", JSON.stringify(list));
           return true;
-        } catch {
-          return false;
-        }
+        } catch { return false; }
       }
       return new Promise((resolve) => {
         try {
-          const tx = db.transaction(STORE_NAME, "readwrite");
-          const store = tx.objectStore(STORE_NAME);
+          const tx = db.transaction(STORE_PICS, "readwrite");
+          const store = tx.objectStore(STORE_PICS);
           store.put(item);
           tx.oncomplete = () => resolve(true);
           tx.onerror = () => resolve(false);
-        } catch {
-          resolve(false);
-        }
+        } catch { resolve(false); }
       });
     },
     async delete(id) {
-      const db = await this.getDB();
+      const db = await getAppDB();
       if (!db) {
         try {
           const list = JSON.parse(localStorage.getItem("focuslearn.pictures") || "[]").filter(x => x.id !== id);
           localStorage.setItem("focuslearn.pictures", JSON.stringify(list));
           return true;
-        } catch {
-          return false;
-        }
+        } catch { return false; }
       }
       return new Promise((resolve) => {
         try {
-          const tx = db.transaction(STORE_NAME, "readwrite");
-          const store = tx.objectStore(STORE_NAME);
+          const tx = db.transaction(STORE_PICS, "readwrite");
+          const store = tx.objectStore(STORE_PICS);
           store.delete(id);
           tx.oncomplete = () => resolve(true);
           tx.onerror = () => resolve(false);
-        } catch {
-          resolve(false);
-        }
+        } catch { resolve(false); }
       });
     },
     async clear() {
-      const db = await this.getDB();
+      const db = await getAppDB();
       if (!db) {
         localStorage.removeItem("focuslearn.pictures");
         return true;
       }
       return new Promise((resolve) => {
         try {
-          const tx = db.transaction(STORE_NAME, "readwrite");
-          const store = tx.objectStore(STORE_NAME);
+          const tx = db.transaction(STORE_PICS, "readwrite");
+          const store = tx.objectStore(STORE_PICS);
           store.clear();
           tx.oncomplete = () => resolve(true);
           tx.onerror = () => resolve(false);
-        } catch {
-          resolve(false);
-        }
+        } catch { resolve(false); }
+      });
+    }
+  };
+
+  // DocDB client storage (Notes and PDFs)
+  const DocDB = {
+    async getAll() {
+      const db = await getAppDB();
+      if (!db) {
+        try { return JSON.parse(localStorage.getItem("focuslearn.documents") || "[]"); } catch { return []; }
+      }
+      return new Promise((resolve) => {
+        try {
+          const tx = db.transaction(STORE_DOCS, "readonly");
+          const store = tx.objectStore(STORE_DOCS);
+          const req = store.getAll();
+          req.onsuccess = () => resolve(req.result || []);
+          req.onerror = () => resolve([]);
+        } catch { resolve([]); }
+      });
+    },
+    async save(item) {
+      const db = await getAppDB();
+      if (!db) {
+        try {
+          const list = JSON.parse(localStorage.getItem("focuslearn.documents") || "[]");
+          const idx = list.findIndex(x => x.id === item.id);
+          if (idx >= 0) list[idx] = item; else list.push(item);
+          localStorage.setItem("focuslearn.documents", JSON.stringify(list));
+          return true;
+        } catch { return false; }
+      }
+      return new Promise((resolve) => {
+        try {
+          const tx = db.transaction(STORE_DOCS, "readwrite");
+          const store = tx.objectStore(STORE_DOCS);
+          store.put(item);
+          tx.oncomplete = () => resolve(true);
+          tx.onerror = () => resolve(false);
+        } catch { resolve(false); }
+      });
+    },
+    async delete(id) {
+      const db = await getAppDB();
+      if (!db) {
+        try {
+          const list = JSON.parse(localStorage.getItem("focuslearn.documents") || "[]").filter(x => x.id !== id);
+          localStorage.setItem("focuslearn.documents", JSON.stringify(list));
+          return true;
+        } catch { return false; }
+      }
+      return new Promise((resolve) => {
+        try {
+          const tx = db.transaction(STORE_DOCS, "readwrite");
+          const store = tx.objectStore(STORE_DOCS);
+          store.delete(id);
+          tx.oncomplete = () => resolve(true);
+          tx.onerror = () => resolve(false);
+        } catch { resolve(false); }
+      });
+    },
+    async clear() {
+      const db = await getAppDB();
+      if (!db) {
+        localStorage.removeItem("focuslearn.documents");
+        return true;
+      }
+      return new Promise((resolve) => {
+        try {
+          const tx = db.transaction(STORE_DOCS, "readwrite");
+          const store = tx.objectStore(STORE_DOCS);
+          store.clear();
+          tx.oncomplete = () => resolve(true);
+          tx.onerror = () => resolve(false);
+        } catch { resolve(false); }
       });
     }
   };
@@ -156,6 +240,52 @@
     const k = 1024, sizes = ["B", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
+  }
+
+  function dataUrlToBlob(dataUrl, mime = "application/pdf") {
+    try {
+      const parts = dataUrl.split(",");
+      const byteStr = atob(parts[1] || parts[0]);
+      const ab = new ArrayBuffer(byteStr.length);
+      const ia = new Uint8Array(ab);
+      for (let i = 0; i < byteStr.length; i++) {
+        ia[i] = byteStr.charCodeAt(i);
+      }
+      return new Blob([ab], { type: mime });
+    } catch {
+      return new Blob([], { type: mime });
+    }
+  }
+
+  function downloadTextFile(text, filename) {
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename || `focuslearn-note-${Date.now()}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function readPdfFile(file) {
+    return new Promise((resolve, reject) => {
+      if (!file || (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf"))) {
+        reject(new Error("Please select a valid PDF file."));
+        return;
+      }
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error("Failed to read PDF file."));
+      reader.onload = (e) => {
+        resolve({
+          pdfData: e.target.result,
+          fileName: file.name,
+          fileSize: file.size
+        });
+      };
+      reader.readAsDataURL(file);
+    });
   }
 
   function processImageFile(file, maxDimension = 1600, quality = 0.88) {
@@ -239,7 +369,7 @@
   function downloadDataUrl(dataUrl, filename) {
     const a = document.createElement("a");
     a.href = dataUrl;
-    a.download = filename || `focuslearn-image-${Date.now()}.jpg`;
+    a.download = filename || `focuslearn-file-${Date.now()}`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -297,12 +427,13 @@
     if(timerRunning && page!=="player")stopTimer(true);
     $$(".page").forEach(p=>p.classList.toggle("active",p.id===`page-${page}`));
     $$(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.page===page));
-    const crumb=$("#pageCrumb"); if(crumb)crumb.textContent=({dashboard:"Dashboard",courses:"My courses",analytics:"Analytics",pictures:"Pictures",notes:"My Notes",settings:"Settings",player:"Learning"}[page]||"Dashboard");
+    const crumb=$("#pageCrumb"); if(crumb)crumb.textContent=({dashboard:"Dashboard",courses:"My courses",analytics:"Analytics",pictures:"Pictures",notes:"Notes & PDFs",settings:"Settings",player:"Learning"}[page]||"Dashboard");
     $("#sidebar")?.classList.remove("open");
     if(page==="dashboard")renderDashboard();
     if(page==="courses")renderManagement();
     if(page==="analytics")renderAnalytics();
     if(page==="pictures")renderPictures();
+    if(page==="notes")renderDocuments();
     window.scrollTo({top:0,behavior:"smooth"});
   }
   function renderDashboard(){
@@ -310,6 +441,8 @@
     $("#statCourses").textContent=state.courses.length;$("#statCompleted").textContent=done;$("#statProgress").textContent=total?Math.round(done/total*100)+"%":"0%";
     const picStat = $("#statPictures");
     if(picStat) picStat.textContent = picturesList.length;
+    const docStat = $("#statDocs");
+    if(docStat) docStat.textContent = docsList.length;
     $("#dashboardEmpty").hidden=state.courses.length>0;
     $("#dashboardCourses").innerHTML=state.courses.map(c=>{
       const s=stats(c),last=lessons(c).find(l=>l.id===c.lastWatched)||lessons(c)[0];
@@ -319,6 +452,7 @@
   function renderManagement(){
     $("#lessonCourse").innerHTML='<option value="">Choose a course</option>'+state.courses.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join("");
     updatePicCourseOptions();
+    updateDocCourseOptions();
     $("#courseCountLabel").textContent=`${state.courses.length} course${state.courses.length===1?"":"s"}`;
     $("#managementEmpty").hidden=state.courses.length>0;
     $("#managementCourses").innerHTML=state.courses.map(c=>{
@@ -345,6 +479,7 @@
     $("#recentSessions").innerHTML=recent.length?recent.map(s=>{const c=state.courses.find(x=>x.id===s.courseId);return `<div class="session-row"><span class="session-indicator"></span><div><strong>${esc(c?.name||"Course session")}</strong><small>${new Date(s.startedAt).toLocaleString()}</small></div><b>${Math.max(1,Math.round(sessionMs(s)/60000))} min</b></div>`;}).join(""):'<p class="muted small">No study sessions yet. Open a lesson and press “Start study” to begin tracking.</p>';
   }
 
+  // Pictures functions
   function updatePicCourseOptions() {
     const courseSelects = [$("#picCourseFilter"), $("#picCourseSelect")];
     courseSelects.forEach(select => {
@@ -553,10 +688,366 @@
     notify("Picture deleted.");
   }
 
+  // Documents (Notes & PDFs) Functions
+  function updateDocCourseOptions() {
+    const courseSelects = [$("#docCourseFilter"), $("#qNoteCourse"), $("#docNoteCourse"), $("#docPdfCourse")];
+    courseSelects.forEach(select => {
+      if (!select) return;
+      const isFilter = select.id === "docCourseFilter";
+      const val = select.value;
+      const defaultOption = isFilter ? '<option value="">All courses</option>' : '<option value="">None (General)</option>';
+      select.innerHTML = defaultOption + state.courses.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join("");
+      select.value = val;
+    });
+  }
+
+  function switchDocTab(tabName) {
+    docActiveTab = tabName;
+    $$(".doc-tab").forEach(b => b.classList.toggle("active", b.dataset.docTab === tabName));
+
+    const listView = $("#docListView");
+    const creatorView = $("#docCreatorView");
+    const externalView = $("#docExternalView");
+
+    if (listView) listView.hidden = (tabName === "creator" || tabName === "external");
+    if (creatorView) creatorView.hidden = (tabName !== "creator");
+    if (externalView) externalView.hidden = (tabName !== "external");
+
+    if (tabName !== "creator" && tabName !== "external") {
+      renderDocuments();
+    }
+  }
+
+  function renderDocuments() {
+    updateDocCourseOptions();
+
+    const notesCount = docsList.filter(d => d.type === "note").length;
+    const pdfsCount = docsList.filter(d => d.type === "pdf").length;
+    const totalCount = docsList.length;
+
+    const tAll = $("#tabCountAll"), tNotes = $("#tabCountNotes"), tPdfs = $("#tabCountPdfs"), statEl = $("#statDocs");
+    if (tAll) tAll.textContent = totalCount;
+    if (tNotes) tNotes.textContent = notesCount;
+    if (tPdfs) tPdfs.textContent = pdfsCount;
+    if (statEl) statEl.textContent = totalCount;
+
+    let filtered = [...docsList];
+
+    // Filter by tab
+    if (docActiveTab === "notes") {
+      filtered = filtered.filter(d => d.type === "note");
+    } else if (docActiveTab === "pdfs") {
+      filtered = filtered.filter(d => d.type === "pdf");
+    }
+
+    // Filter by search text
+    if (docFilterState.search) {
+      const q = docFilterState.search.toLowerCase();
+      filtered = filtered.filter(d =>
+        (d.title && d.title.toLowerCase().includes(q)) ||
+        (d.details && d.details.toLowerCase().includes(q)) ||
+        (d.content && d.content.toLowerCase().includes(q)) ||
+        (d.fileName && d.fileName.toLowerCase().includes(q)) ||
+        (d.category && d.category.toLowerCase().includes(q))
+      );
+    }
+
+    // Filter by category
+    if (docFilterState.category) {
+      filtered = filtered.filter(d => d.category === docFilterState.category);
+    }
+
+    // Filter by course
+    if (docFilterState.courseId) {
+      filtered = filtered.filter(d => d.courseId === docFilterState.courseId);
+    }
+
+    // Sorting
+    if (docFilterState.sort === "newest") {
+      filtered.sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+    } else if (docFilterState.sort === "oldest") {
+      filtered.sort((a, b) => String(a.createdAt || "").localeCompare(String(b.createdAt || "")));
+    } else if (docFilterState.sort === "title") {
+      filtered.sort((a, b) => String(a.title || "").localeCompare(String(b.title || "")));
+    }
+
+    const grid = $("#documentsGrid");
+    const empty = $("#documentsEmpty");
+    const countLabel = $("#docCountLabel");
+
+    if (countLabel) {
+      if (totalCount === 0) {
+        countLabel.textContent = "0 items stored";
+      } else if (filtered.length === totalCount) {
+        countLabel.textContent = `${totalCount} item${totalCount === 1 ? "" : "s"} (${notesCount} notes, ${pdfsCount} PDFs)`;
+      } else {
+        countLabel.textContent = `Showing ${filtered.length} of ${totalCount} item${totalCount === 1 ? "" : "s"}`;
+      }
+    }
+
+    if (empty) empty.hidden = filtered.length > 0;
+    if (!grid) return;
+
+    grid.innerHTML = filtered.map(d => {
+      const course = state.courses.find(c => c.id === d.courseId);
+      const dateStr = d.createdAt ? new Date(d.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "";
+
+      if (d.type === "pdf") {
+        return `
+          <article class="doc-card doc-card-pdf" data-doc-id="${d.id}">
+            <div class="doc-card-head">
+              <span class="doc-type-icon icon-pdf" aria-hidden="true">📄</span>
+              <div class="pic-badge-group" style="margin:0">
+                <span class="pic-category-badge badge-pdf">${esc(d.category || "PDF")}</span>
+                ${course ? `<span class="pic-course-badge" title="Course: ${esc(course.name)}">📚 ${esc(course.name)}</span>` : ""}
+              </div>
+            </div>
+            <h3 class="doc-card-title">${esc(d.title)}</h3>
+            ${d.details ? `<div class="doc-details-snippet" title="${esc(d.details)}"><b>Details:</b> ${esc(d.details)}</div>` : ""}
+            <div class="doc-pdf-meta-box">
+              <span style="font-size:16px" aria-hidden="true">📎</span>
+              <div style="min-width:0;flex:1">
+                <strong style="display:block;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(d.fileName || "document.pdf")}</strong>
+                <small class="muted" style="font-size:9px">${formatBytes(d.fileSize)}</small>
+              </div>
+            </div>
+            <div class="doc-card-footer">
+              <small>${dateStr}</small>
+              <div class="doc-card-actions">
+                <button type="button" class="mini-button" data-view-pdf="${d.id}" title="Read PDF document">Read</button>
+                <button type="button" class="mini-button edit" data-edit-pdf="${d.id}" title="Edit PDF details">Edit</button>
+                <button type="button" class="mini-button" data-download-pdf="${d.id}" title="Download PDF file">Download</button>
+                <button type="button" class="mini-button delete" data-delete-doc="${d.id}" title="Delete PDF document">Delete</button>
+              </div>
+            </div>
+          </article>
+        `;
+      }
+
+      // Note card
+      return `
+        <article class="doc-card doc-card-note" data-doc-id="${d.id}">
+          <div class="doc-card-head">
+            <span class="doc-type-icon icon-note" aria-hidden="true">✎</span>
+            <div class="pic-badge-group" style="margin:0">
+              <span class="pic-category-badge badge-note">${esc(d.category || "NOTE")}</span>
+              ${course ? `<span class="pic-course-badge" title="Course: ${esc(course.name)}">📚 ${esc(course.name)}</span>` : ""}
+            </div>
+          </div>
+          <h3 class="doc-card-title">${esc(d.title)}</h3>
+          ${d.details ? `<div class="doc-details-snippet" title="${esc(d.details)}"><b>Takeaway:</b> ${esc(d.details)}</div>` : ""}
+          <div class="doc-content-snippet">${esc(d.content || "No notes content.")}</div>
+          <div class="doc-card-footer">
+            <small>${dateStr}</small>
+            <div class="doc-card-actions">
+              <button type="button" class="mini-button" data-view-note="${d.id}" title="Read note">View</button>
+              <button type="button" class="mini-button edit" data-edit-note="${d.id}" title="Edit note and details">Edit</button>
+              <button type="button" class="mini-button delete" data-delete-doc="${d.id}" title="Delete note">Delete</button>
+            </div>
+          </div>
+        </article>
+      `;
+    }).join("");
+  }
+
+  // Note Modal Operations
+  function openAddNoteModal(courseId = "") {
+    editingDocId = null;
+    $("#docNoteModalTitle").textContent = "Create study note";
+    $("#docNoteSubmitBtn").innerHTML = "Save note <span>→</span>";
+    $("#docNoteForm").reset();
+    $("#docNoteId").value = "";
+    updateDocCourseOptions();
+    if (courseId) {
+      $("#docNoteCourse").value = courseId;
+    }
+    $("#docNoteModalOverlay").hidden = false;
+    $("#docNoteTitle").focus();
+  }
+
+  function openEditNoteModal(id) {
+    const d = docsList.find(x => x.id === id && x.type === "note");
+    if (!d) return;
+    editingDocId = id;
+    $("#docNoteModalTitle").textContent = "Edit note & details";
+    $("#docNoteSubmitBtn").innerHTML = "Save changes <span>✓</span>";
+    $("#docNoteId").value = d.id;
+    $("#docNoteTitle").value = d.title || "";
+    $("#docNoteCategory").value = d.category || "Lecture Notes";
+    updateDocCourseOptions();
+    $("#docNoteCourse").value = d.courseId || "";
+    $("#docNoteDetails").value = d.details || "";
+    $("#docNoteContent").value = d.content || "";
+
+    closeNoteViewer();
+    $("#docNoteModalOverlay").hidden = false;
+    $("#docNoteTitle").focus();
+  }
+
+  function closeNoteModal() {
+    $("#docNoteModalOverlay").hidden = true;
+    editingDocId = null;
+  }
+
+  function openNoteViewer(id) {
+    const d = docsList.find(x => x.id === id && x.type === "note");
+    if (!d) return;
+    currentViewingNoteId = id;
+    const course = state.courses.find(c => c.id === d.courseId);
+
+    $("#viewNoteTitle").textContent = d.title || "Untitled Note";
+    $("#viewNoteCategory").textContent = d.category || "NOTE";
+    const courseEl = $("#viewNoteCourse");
+    if (course) {
+      courseEl.hidden = false;
+      courseEl.textContent = `📚 ${course.name}`;
+    } else {
+      courseEl.hidden = true;
+    }
+
+    const dateStr = d.createdAt ? new Date(d.createdAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "";
+    const updatedStr = d.updatedAt && d.updatedAt !== d.createdAt ? ` · Updated ${new Date(d.updatedAt).toLocaleDateString()}` : "";
+    $("#viewNoteDate").textContent = `Created ${dateStr}${updatedStr}`;
+
+    const detailsWrap = $("#viewNoteDetailsWrap");
+    if (d.details && d.details.trim()) {
+      detailsWrap.hidden = false;
+      $("#viewNoteDetails").textContent = d.details.trim();
+    } else {
+      detailsWrap.hidden = true;
+    }
+
+    $("#viewNoteContent").textContent = d.content || "(Empty note)";
+    $("#docNoteViewModal").hidden = false;
+  }
+
+  function closeNoteViewer() {
+    $("#docNoteViewModal").hidden = true;
+    currentViewingNoteId = null;
+  }
+
+  // PDF Modal Operations
+  function openAddPdfModal(courseId = "") {
+    editingDocId = null;
+    stagedPdfData = null;
+    $("#docPdfModalTitle").textContent = "Upload PDF document";
+    $("#docPdfSubmitBtn").innerHTML = "Save PDF <span>→</span>";
+    $("#docPdfForm").reset();
+    $("#docPdfId").value = "";
+    $("#docPdfDropEmpty").hidden = false;
+    $("#docPdfDropPreview").hidden = true;
+    $("#docPdfPreviewName").textContent = "";
+    $("#docPdfPreviewInfo").textContent = "";
+    updateDocCourseOptions();
+    if (courseId) {
+      $("#docPdfCourse").value = courseId;
+    }
+    $("#docPdfModalOverlay").hidden = false;
+    $("#docPdfTitle").focus();
+  }
+
+  function openEditPdfModal(id) {
+    const d = docsList.find(x => x.id === id && x.type === "pdf");
+    if (!d) return;
+    editingDocId = id;
+    stagedPdfData = {
+      pdfData: d.pdfData,
+      fileName: d.fileName,
+      fileSize: d.fileSize
+    };
+    $("#docPdfModalTitle").textContent = "Edit PDF details";
+    $("#docPdfSubmitBtn").innerHTML = "Save changes <span>✓</span>";
+    $("#docPdfId").value = d.id;
+    $("#docPdfTitle").value = d.title || "";
+    $("#docPdfCategory").value = d.category || "Lecture Slides";
+    updateDocCourseOptions();
+    $("#docPdfCourse").value = d.courseId || "";
+    $("#docPdfDetails").value = d.details || "";
+
+    $("#docPdfDropEmpty").hidden = true;
+    $("#docPdfDropPreview").hidden = false;
+    $("#docPdfPreviewName").textContent = d.fileName || "document.pdf";
+    $("#docPdfPreviewInfo").textContent = formatBytes(d.fileSize);
+
+    closePdfViewer();
+    $("#docPdfModalOverlay").hidden = false;
+    $("#docPdfTitle").focus();
+  }
+
+  function closePdfModal() {
+    $("#docPdfModalOverlay").hidden = true;
+    stagedPdfData = null;
+    editingDocId = null;
+  }
+
+  function openPdfViewer(id) {
+    const d = docsList.find(x => x.id === id && x.type === "pdf");
+    if (!d || !d.pdfData) {
+      notify("PDF document could not be loaded.");
+      return;
+    }
+    currentViewingPdfId = id;
+    const course = state.courses.find(c => c.id === d.courseId);
+
+    if (currentPdfBlobUrl) {
+      URL.revokeObjectURL(currentPdfBlobUrl);
+      currentPdfBlobUrl = null;
+    }
+
+    const blob = dataUrlToBlob(d.pdfData, "application/pdf");
+    currentPdfBlobUrl = URL.createObjectURL(blob);
+    $("#pdfViewerFrame").src = currentPdfBlobUrl;
+
+    $("#viewPdfTitle").textContent = d.title || "PDF Document";
+    $("#viewPdfCategory").textContent = d.category || "PDF";
+    const courseEl = $("#viewPdfCourse");
+    if (course) {
+      courseEl.hidden = false;
+      courseEl.textContent = `📚 ${course.name}`;
+    } else {
+      courseEl.hidden = true;
+    }
+
+    const dateStr = d.createdAt ? new Date(d.createdAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "";
+    $("#viewPdfDate").textContent = `Added ${dateStr} · ${formatBytes(d.fileSize)}`;
+
+    $("#viewPdfDetails").textContent = d.details ? d.details : "No summary or notes recorded for this PDF.";
+    $("#docPdfViewModal").hidden = false;
+  }
+
+  function closePdfViewer() {
+    $("#docPdfViewModal").hidden = true;
+    currentViewingPdfId = null;
+    const frame = $("#pdfViewerFrame");
+    if (frame) frame.src = "";
+    if (currentPdfBlobUrl) {
+      URL.revokeObjectURL(currentPdfBlobUrl);
+      currentPdfBlobUrl = null;
+    }
+  }
+
+  async function handleDeleteDoc(id) {
+    const d = docsList.find(x => x.id === id);
+    if (!d) return;
+    const itemType = d.type === "pdf" ? "PDF document" : "note";
+    if (!confirm(`Delete ${itemType} "${d.title}"? This cannot be undone.`)) return;
+
+    await DocDB.delete(id);
+    docsList = docsList.filter(x => x.id !== id);
+
+    if (currentViewingNoteId === id) closeNoteViewer();
+    if (currentViewingPdfId === id) closePdfViewer();
+
+    renderDocuments();
+    renderDashboard();
+    notify(`${itemType.charAt(0).toUpperCase() + itemType.slice(1)} deleted.`);
+  }
+
   function renderAll(){
     renderDashboard();
     renderManagement();
     renderPictures();
+    renderDocuments();
     if($("#page-analytics")?.classList.contains("active"))renderAnalytics();
   }
 
@@ -609,7 +1100,7 @@
     if (e.target === $("#picModalOverlay")) closePicModal();
   });
 
-  // Dropzone interactions
+  // Dropzone interactions for Pictures
   const dropZone = $("#picDropZone");
   const fileInput = $("#picFileInput");
   dropZone?.addEventListener("click", e => {
@@ -731,7 +1222,7 @@
     renderPictures();
   });
 
-  // Filter & Search Event Listeners
+  // Picture Filters
   $("#picSearchInput")?.addEventListener("input", e => {
     picFilterState.search = e.target.value.trim();
     const clearBtn = $("#picClearSearch");
@@ -779,7 +1270,7 @@
     if (currentViewingPicId) handleDeletePic(currentViewingPicId);
   });
 
-  // Global Paste Listener (Ctrl+V / Cmd+V anywhere to paste images)
+  // Global Paste Listener
   document.addEventListener("paste", async e => {
     const items = e.clipboardData?.items;
     if (!items) return;
@@ -802,7 +1293,303 @@
     }
   });
 
-  // Player button for course pictures
+  // Documents (Notes & PDFs) Controls & Listeners
+  $("#openAddNoteBtn")?.addEventListener("click", () => openAddNoteModal());
+  $("#emptyAddNoteBtn")?.addEventListener("click", () => openAddNoteModal());
+  $("#openAddPdfBtn")?.addEventListener("click", () => openAddPdfModal());
+  $("#emptyAddPdfBtn")?.addEventListener("click", () => openAddPdfModal());
+
+  // Note Modal Actions
+  $("#docNoteModalClose")?.addEventListener("click", closeNoteModal);
+  $("#docNoteCancelBtn")?.addEventListener("click", closeNoteModal);
+  $("#docNoteModalOverlay")?.addEventListener("click", e => {
+    if (e.target === $("#docNoteModalOverlay")) closeNoteModal();
+  });
+
+  // Note Form Submit (Modal)
+  $("#docNoteForm")?.addEventListener("submit", async e => {
+    e.preventDefault();
+    const title = $("#docNoteTitle").value.trim();
+    if (!title) { notify("Please enter a note title."); return; }
+    const category = $("#docNoteCategory").value || "Lecture Notes";
+    const courseId = $("#docNoteCourse").value || null;
+    const details = $("#docNoteDetails").value.trim();
+    const content = $("#docNoteContent").value.trim();
+    if (!content) { notify("Note content cannot be empty."); return; }
+    const now = new Date().toISOString();
+
+    if (editingDocId) {
+      const idx = docsList.findIndex(x => x.id === editingDocId);
+      if (idx >= 0) {
+        const updated = {
+          ...docsList[idx],
+          title,
+          category,
+          courseId,
+          details,
+          content,
+          updatedAt: now
+        };
+        await DocDB.save(updated);
+        docsList[idx] = updated;
+        notify("Note details updated.");
+      }
+    } else {
+      const newNote = {
+        id: uid(),
+        type: "note",
+        title,
+        category,
+        courseId,
+        details,
+        content,
+        createdAt: now,
+        updatedAt: now
+      };
+      await DocDB.save(newNote);
+      docsList.unshift(newNote);
+      notify("Note saved.");
+    }
+
+    closeNoteModal();
+    renderDocuments();
+    renderDashboard();
+  });
+
+  // Quick In-Page Note Creator Form
+  $("#quickNoteForm")?.addEventListener("submit", async e => {
+    e.preventDefault();
+    const title = $("#qNoteTitle").value.trim();
+    if (!title) { notify("Please enter a note title."); return; }
+    const category = $("#qNoteCategory").value || "Lecture Notes";
+    const courseId = $("#qNoteCourse").value || null;
+    const details = $("#qNoteDetails").value.trim();
+    const content = $("#qNoteContent").value.trim();
+    if (!content) { notify("Note content cannot be empty."); return; }
+    const now = new Date().toISOString();
+
+    const newNote = {
+      id: uid(),
+      type: "note",
+      title,
+      category,
+      courseId,
+      details,
+      content,
+      createdAt: now,
+      updatedAt: now
+    };
+    await DocDB.save(newNote);
+    docsList.unshift(newNote);
+    $("#quickNoteForm").reset();
+    notify("Note saved to library.");
+    switchDocTab("notes");
+    renderDashboard();
+  });
+
+  // PDF Dropzone & File Pickers
+  const docPdfDropZone = $("#docPdfDropZone");
+  const docPdfFileInput = $("#docPdfFileInput");
+  docPdfDropZone?.addEventListener("click", () => docPdfFileInput?.click());
+  $("#docPdfChangeFileBtn")?.addEventListener("click", e => {
+    e.stopPropagation();
+    docPdfFileInput?.click();
+  });
+
+  docPdfFileInput?.addEventListener("change", async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const pdfInfo = await readPdfFile(file);
+      stagedPdfData = pdfInfo;
+      $("#docPdfPreviewName").textContent = pdfInfo.fileName;
+      $("#docPdfPreviewInfo").textContent = formatBytes(pdfInfo.fileSize);
+      $("#docPdfDropEmpty").hidden = true;
+      $("#docPdfDropPreview").hidden = false;
+      if (!$("#docPdfTitle").value.trim()) {
+        const cleanName = pdfInfo.fileName.replace(/\.pdf$/i, "").replace(/[-_]/g, " ").trim();
+        $("#docPdfTitle").value = cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
+      }
+    } catch (err) {
+      notify(err.message || "Failed to read PDF file.");
+    } finally {
+      e.target.value = "";
+    }
+  });
+
+  docPdfDropZone?.addEventListener("dragover", e => {
+    e.preventDefault();
+    docPdfDropZone.classList.add("dragover");
+  });
+  docPdfDropZone?.addEventListener("dragleave", () => {
+    docPdfDropZone.classList.remove("dragover");
+  });
+  docPdfDropZone?.addEventListener("drop", async e => {
+    e.preventDefault();
+    docPdfDropZone.classList.remove("dragover");
+    const file = e.dataTransfer?.files?.[0];
+    if (!file) return;
+    try {
+      const pdfInfo = await readPdfFile(file);
+      stagedPdfData = pdfInfo;
+      $("#docPdfPreviewName").textContent = pdfInfo.fileName;
+      $("#docPdfPreviewInfo").textContent = formatBytes(pdfInfo.fileSize);
+      $("#docPdfDropEmpty").hidden = true;
+      $("#docPdfDropPreview").hidden = false;
+      if (!$("#docPdfTitle").value.trim()) {
+        const cleanName = pdfInfo.fileName.replace(/\.pdf$/i, "").replace(/[-_]/g, " ").trim();
+        $("#docPdfTitle").value = cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
+      }
+    } catch (err) {
+      notify(err.message || "Failed to read PDF file.");
+    }
+  });
+
+  // PDF Modal Actions
+  $("#docPdfModalClose")?.addEventListener("click", closePdfModal);
+  $("#docPdfCancelBtn")?.addEventListener("click", closePdfModal);
+  $("#docPdfModalOverlay")?.addEventListener("click", e => {
+    if (e.target === $("#docPdfModalOverlay")) closePdfModal();
+  });
+
+  // PDF Form Submit
+  $("#docPdfForm")?.addEventListener("submit", async e => {
+    e.preventDefault();
+    if (!stagedPdfData || !stagedPdfData.pdfData) {
+      notify("Please choose or drag & drop a PDF file.");
+      return;
+    }
+    const title = $("#docPdfTitle").value.trim();
+    if (!title) { notify("Please provide a title for this PDF."); return; }
+    const category = $("#docPdfCategory").value || "Lecture Slides";
+    const courseId = $("#docPdfCourse").value || null;
+    const details = $("#docPdfDetails").value.trim();
+    const now = new Date().toISOString();
+
+    if (editingDocId) {
+      const idx = docsList.findIndex(x => x.id === editingDocId);
+      if (idx >= 0) {
+        const updated = {
+          ...docsList[idx],
+          title,
+          category,
+          courseId,
+          details,
+          pdfData: stagedPdfData.pdfData,
+          fileName: stagedPdfData.fileName,
+          fileSize: stagedPdfData.fileSize,
+          updatedAt: now
+        };
+        await DocDB.save(updated);
+        docsList[idx] = updated;
+        notify("PDF details updated.");
+      }
+    } else {
+      const newPdf = {
+        id: uid(),
+        type: "pdf",
+        title,
+        category,
+        courseId,
+        details,
+        pdfData: stagedPdfData.pdfData,
+        fileName: stagedPdfData.fileName,
+        fileSize: stagedPdfData.fileSize,
+        createdAt: now,
+        updatedAt: now
+      };
+      await DocDB.save(newPdf);
+      docsList.unshift(newPdf);
+      notify("PDF document saved.");
+    }
+
+    closePdfModal();
+    renderDocuments();
+    renderDashboard();
+  });
+
+  // Document Tab Navigation
+  document.addEventListener("click", e => {
+    const tabBtn = e.target.closest("[data-doc-tab]");
+    if (tabBtn) {
+      switchDocTab(tabBtn.dataset.docTab);
+      return;
+    }
+  });
+
+  // Document Filters & Search
+  $("#docSearchInput")?.addEventListener("input", e => {
+    docFilterState.search = e.target.value.trim();
+    const clearBtn = $("#docClearSearch");
+    if (clearBtn) clearBtn.hidden = !docFilterState.search;
+    renderDocuments();
+  });
+  $("#docClearSearch")?.addEventListener("click", () => {
+    const inp = $("#docSearchInput");
+    if (inp) inp.value = "";
+    docFilterState.search = "";
+    $("#docClearSearch").hidden = true;
+    renderDocuments();
+  });
+  $("#docCategoryFilter")?.addEventListener("change", e => {
+    docFilterState.category = e.target.value;
+    renderDocuments();
+  });
+  $("#docCourseFilter")?.addEventListener("change", e => {
+    docFilterState.courseId = e.target.value;
+    renderDocuments();
+  });
+  $("#docSortOrder")?.addEventListener("change", e => {
+    docFilterState.sort = e.target.value;
+    renderDocuments();
+  });
+
+  // Note Viewer Modal Controls
+  $("#viewNoteClose")?.addEventListener("click", closeNoteViewer);
+  $("#docNoteViewModal")?.addEventListener("click", e => {
+    if (e.target === $("#docNoteViewModal")) closeNoteViewer();
+  });
+  $("#viewNoteCopyBtn")?.addEventListener("click", () => {
+    const d = docsList.find(x => x.id === currentViewingNoteId);
+    if (!d || !d.content) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(d.content).then(() => notify("Note copied to clipboard."));
+    } else {
+      notify("Clipboard copy not supported in this browser.");
+    }
+  });
+  $("#viewNoteDownloadBtn")?.addEventListener("click", () => {
+    const d = docsList.find(x => x.id === currentViewingNoteId);
+    if (!d) return;
+    const safeTitle = (d.title || "study-note").toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    downloadTextFile(d.content, `${safeTitle}.txt`);
+  });
+  $("#viewNoteEditBtn")?.addEventListener("click", () => {
+    if (currentViewingNoteId) openEditNoteModal(currentViewingNoteId);
+  });
+  $("#viewNoteDeleteBtn")?.addEventListener("click", () => {
+    if (currentViewingNoteId) handleDeleteDoc(currentViewingNoteId);
+  });
+
+  // PDF Viewer Modal Controls
+  $("#viewPdfClose")?.addEventListener("click", closePdfViewer);
+  $("#docPdfViewModal")?.addEventListener("click", e => {
+    if (e.target === $("#docPdfViewModal")) closePdfViewer();
+  });
+  $("#viewPdfDownloadBtn")?.addEventListener("click", () => {
+    const d = docsList.find(x => x.id === currentViewingPdfId);
+    if (!d || !d.pdfData) return;
+    const safeName = d.fileName || `${(d.title || "document").toLowerCase().replace(/[^a-z0-9]+/g, "-")}.pdf`;
+    downloadDataUrl(d.pdfData, safeName);
+  });
+  $("#viewPdfEditBtn")?.addEventListener("click", () => {
+    if (currentViewingPdfId) openEditPdfModal(currentViewingPdfId);
+  });
+  $("#viewPdfDeleteBtn")?.addEventListener("click", () => {
+    if (currentViewingPdfId) handleDeleteDoc(currentViewingPdfId);
+  });
+
+  // Player Navigation Buttons
   $("#playerCoursePicsBtn")?.addEventListener("click", () => {
     if (currentCourseId) {
       picFilterState.courseId = currentCourseId;
@@ -810,6 +1597,14 @@
       if (select) select.value = currentCourseId;
     }
     navigate("pictures");
+  });
+  $("#playerCourseNotesBtn")?.addEventListener("click", () => {
+    if (currentCourseId) {
+      docFilterState.courseId = currentCourseId;
+      const select = $("#docCourseFilter");
+      if (select) select.value = currentCourseId;
+    }
+    navigate("notes");
   });
 
   // Global Click Handlers
@@ -823,13 +1618,34 @@
     // Picture actions
     const vp = e.target.closest("[data-view-pic]");
     if (vp) { openLightbox(vp.dataset.viewPic); return; }
-
     const ep = e.target.closest("[data-edit-pic]");
     if (ep) { openEditPicModal(ep.dataset.editPic); return; }
-
     const dp = e.target.closest("[data-delete-pic]");
     if (dp) { handleDeletePic(dp.dataset.deletePic); return; }
 
+    // Note actions
+    const vn = e.target.closest("[data-view-note]");
+    if (vn) { openNoteViewer(vn.dataset.viewNote); return; }
+    const en = e.target.closest("[data-edit-note]");
+    if (en) { openEditNoteModal(en.dataset.editNote); return; }
+
+    // PDF actions
+    const vpdf = e.target.closest("[data-view-pdf]");
+    if (vpdf) { openPdfViewer(vpdf.dataset.viewPdf); return; }
+    const epdf = e.target.closest("[data-edit-pdf]");
+    if (epdf) { openEditPdfModal(epdf.dataset.editPdf); return; }
+    const dpdf = e.target.closest("[data-download-pdf]");
+    if (dpdf) {
+      const d = docsList.find(x => x.id === dpdf.dataset.downloadPdf);
+      if (d && d.pdfData) downloadDataUrl(d.pdfData, d.fileName || "document.pdf");
+      return;
+    }
+
+    // Delete Document (Note or PDF)
+    const delDoc = e.target.closest("[data-delete-doc]");
+    if (delDoc) { handleDeleteDoc(delDoc.dataset.deleteDoc); return; }
+
+    // Course & Lesson Edit
     const editLesson = e.target.closest("[data-edit-lesson]");
     if (editLesson) {
       const [cid,mid,lid] = editLesson.dataset.editLesson.split("|");
@@ -900,10 +1716,14 @@
   // Keyboard navigation & accessibility
   document.addEventListener("keydown", e => {
     if (e.key === "Escape") {
+      if (!$("#docPdfViewModal")?.hidden) { closePdfViewer(); return; }
+      if (!$("#docNoteViewModal")?.hidden) { closeNoteViewer(); return; }
+      if (!$("#docPdfModalOverlay")?.hidden) { closePdfModal(); return; }
+      if (!$("#docNoteModalOverlay")?.hidden) { closeNoteModal(); return; }
       if (!$("#picLightboxOverlay")?.hidden) { closeLightbox(); return; }
       if (!$("#picModalOverlay")?.hidden) { closePicModal(); return; }
     }
-    if ((e.key === "Enter" || e.key === " ") && e.target.matches("[data-lesson],[data-open-course],[data-view-pic]")) {
+    if ((e.key === "Enter" || e.key === " ") && e.target.matches("[data-lesson],[data-open-course],[data-view-pic],[data-view-note],[data-view-pdf]")) {
       e.preventDefault();
       e.target.click();
     }
@@ -920,15 +1740,17 @@
   $("#backToCourses")?.addEventListener("click", () => navigate("courses"));
   $("#menuToggle")?.addEventListener("click", () => $("#sidebar")?.classList.toggle("open"));
 
-  // Settings: Export, Import, Reset (with pictures included)
+  // Settings: Export, Import, Reset (with pictures, notes & PDFs included)
   $("#exportButton")?.addEventListener("click", async () => {
     const pics = await PicDB.getAll();
+    const docs = await DocDB.getAll();
     const payload = {
       app: "FocusLearn",
-      version: 3,
+      version: 4,
       exportedAt: new Date().toISOString(),
       ...state,
-      pictures: pics
+      pictures: pics,
+      documents: docs
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob), a = document.createElement("a");
@@ -943,8 +1765,9 @@
     try {
       const p = JSON.parse(await f.text()), cs = p.courses;
       if (!Array.isArray(cs) || !cs.every(c => c && typeof c.name === "string" && Array.isArray(c.modules) && c.modules.every(m => typeof m.name === "string" && Array.isArray(m.lessons) && m.lessons.every(l => typeof l.videoId === "string" && /^[A-Za-z0-9_-]{11}$/.test(l.videoId))))) throw Error();
-      if (!confirm("Import replaces your current library and pictures. Continue?")) return;
+      if (!confirm("Import replaces your current library, pictures, notes, and PDFs. Continue?")) return;
       state = { courses: cs, sessions: Array.isArray(p.sessions) ? p.sessions : [] };
+
       if (Array.isArray(p.pictures)) {
         await PicDB.clear();
         for (const pic of p.pictures) {
@@ -952,6 +1775,15 @@
         }
         picturesList = p.pictures;
       }
+
+      if (Array.isArray(p.documents)) {
+        await DocDB.clear();
+        for (const doc of p.documents) {
+          await DocDB.save(doc);
+        }
+        docsList = p.documents;
+      }
+
       save();
       notify("Backup imported.");
     } catch {
@@ -962,20 +1794,23 @@
   });
 
   $("#resetButton")?.addEventListener("click", async () => {
-    if (confirm("Delete all courses, progress, and stored pictures from this browser?")) {
+    if (confirm("Delete all courses, progress, pictures, notes, and stored PDFs from this browser?")) {
       if (timerRunning) stopTimer(true);
       state = { courses: [], sessions: [] };
       localStorage.removeItem(KEY);
       await PicDB.clear();
+      await DocDB.clear();
       picturesList = [];
+      docsList = [];
       save();
       notify("Library cleared.");
     }
   });
 
-  // Initialize DB and load pictures
-  PicDB.getAll().then(pics => {
+  // Initialize DB and load pictures and documents
+  Promise.all([PicDB.getAll(), DocDB.getAll()]).then(([pics, docs]) => {
     picturesList = Array.isArray(pics) ? pics : [];
+    docsList = Array.isArray(docs) ? docs : [];
     renderAll();
     renderTimer();
   }).catch(() => {
