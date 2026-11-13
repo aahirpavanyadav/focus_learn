@@ -18,6 +18,7 @@
         <button class="nav-item active" data-page="dashboard"><span class="nav-icon">▦</span>Dashboard</button>
         <button class="nav-item" data-page="courses"><span class="nav-icon">▤</span>My courses</button>
         <button class="nav-item" data-page="analytics"><span class="nav-icon">◷</span>Analytics</button>
+        <button class="nav-item" data-page="pictures"><span class="nav-icon">🖼</span>Pictures</button>
         <button class="nav-item" data-page="notes"><span class="nav-icon">✎</span>My Notes</button>
         <button class="nav-item" data-page="settings"><span class="nav-icon">⚙</span>Settings</button>
       </nav>
@@ -39,10 +40,11 @@
           <div><p class="eyebrow">YOUR LEARNING, AT A GLANCE</p><h1>Keep your momentum.</h1><p class="muted">Pick up where you left off or make room for something new.</p></div>
           <button class="primary-button" data-go="courses">＋ Add a course</button>
         </div>
-        <div class="stats-grid">
+        <div class="stats-grid dashboard-stats">
           <article class="stat-card"><span class="stat-icon purple">▤</span><div><small>Courses</small><strong id="statCourses">0</strong></div></article>
           <article class="stat-card"><span class="stat-icon green">✓</span><div><small>Lessons completed</small><strong id="statCompleted">0</strong></div></article>
           <article class="stat-card"><span class="stat-icon amber">◷</span><div><small>Overall progress</small><strong id="statProgress">0%</strong></div></article>
+          <article class="stat-card" style="cursor:pointer;" data-go="pictures"><span class="stat-icon purple">🖼</span><div><small>Saved pictures</small><strong id="statPictures">0</strong></div></article>
         </div>
         <div class="section-heading"><div><p class="eyebrow">YOUR LIBRARY</p><h2>Continue learning</h2></div><button class="text-button" data-go="courses">Manage courses <span>→</span></button></div>
         <div class="course-grid" id="dashboardCourses"></div>
@@ -107,10 +109,63 @@
         <div class="player-layout">
           <div class="player-main">
             <div class="video-frame" id="videoFrame"><div class="player-placeholder">Select a lesson to begin</div></div>
-            <div class="lesson-heading"><div><p class="eyebrow" id="playerModuleLabel">NOW LEARNING</p><h1 id="playerLessonTitle">Choose a lesson</h1><p class="muted" id="playerLessonMeta">Your progress is saved automatically on this device.</p></div><div class="player-actions"><div class="study-timer"><span class="timer-dot" id="timerDot"></span><strong id="studyTimerDisplay">00:00:00</strong><button class="timer-button" id="studyTimerToggle" type="button">Start study</button></div><button class="complete-button" id="completeButton">✓ Mark complete</button></div></div>
+            <div class="lesson-heading"><div><p class="eyebrow" id="playerModuleLabel">NOW LEARNING</p><h1 id="playerLessonTitle">Choose a lesson</h1><p class="muted" id="playerLessonMeta">Your progress is saved automatically on this device.</p></div><div class="player-actions"><div class="study-timer"><span class="timer-dot" id="timerDot"></span><strong id="studyTimerDisplay">00:00:00</strong><button class="timer-button" id="studyTimerToggle" type="button">Start study</button></div><button class="mini-button" id="playerCoursePicsBtn" type="button" title="View or add pictures for this course" style="padding:10px 12px;font-weight:700">🖼 Pictures</button><button class="complete-button" id="completeButton">✓ Mark complete</button></div></div>
             <div class="panel lesson-note"><h3>Stay focused</h3><p>Keep this space for the lesson. When you're finished, mark it complete and move to the next one.</p></div>
           </div>
           <aside class="panel curriculum"><div class="curriculum-header"><div><p class="eyebrow">COURSE CONTENT</p><h3 id="curriculumTitle">Curriculum</h3></div><span class="progress-number" id="curriculumProgress">0%</span></div><div class="progress-track"><span id="curriculumBar"></span></div><div id="curriculumList" class="curriculum-list"></div></aside>
+        </div>
+      </section>
+
+      <section class="page" id="page-pictures">
+        <div class="welcome-row">
+          <div>
+            <p class="eyebrow">VISUAL STUDY VAULT</p>
+            <h1>Pictures &amp; Visual Notes</h1>
+            <p class="muted">Store, view, and organize study diagrams, whiteboard photos, formulas, and cheatsheets.</p>
+          </div>
+          <button class="primary-button" id="openAddPicBtn" type="button">＋ Add picture</button>
+        </div>
+
+        <div class="pic-toolbar">
+          <div class="pic-search-box">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="picSearchInput" placeholder="Search pictures by title or notes..." autocomplete="off">
+            <button type="button" class="clear-search-btn" id="picClearSearch" hidden title="Clear search">✕</button>
+          </div>
+          <div class="pic-filters">
+            <select id="picCategoryFilter" aria-label="Filter by category">
+              <option value="">All categories</option>
+              <option value="Diagram">Diagram</option>
+              <option value="Formula">Formula</option>
+              <option value="Cheatsheet">Cheatsheet</option>
+              <option value="Lecture Note">Lecture Note</option>
+              <option value="Screenshot">Screenshot</option>
+              <option value="Mindmap">Mindmap</option>
+              <option value="Other">Other</option>
+            </select>
+            <select id="picCourseFilter" aria-label="Filter by course">
+              <option value="">All courses</option>
+            </select>
+            <select id="picSortOrder" aria-label="Sort order">
+              <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
+              <option value="title">Title (A-Z)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="pic-status-row">
+          <span class="muted small" id="picCountLabel">0 pictures</span>
+          <span class="pic-hint-pill">💡 Paste any image with Ctrl+V anytime</span>
+        </div>
+
+        <div class="pic-grid" id="picturesGrid"></div>
+
+        <div class="empty-state" id="picturesEmpty">
+          <div class="empty-art">🖼</div>
+          <h3>No pictures stored yet</h3>
+          <p>Keep visual notes, whiteboard snaps, cheatsheets, and diagrams organized alongside your learning path.</p>
+          <button class="primary-button" id="emptyAddPicBtn" type="button">＋ Add your first picture</button>
         </div>
       </section>
 
@@ -128,15 +183,122 @@
       <section class="page" id="page-settings">
         <div class="page-heading"><p class="eyebrow">YOUR DATA, YOUR CONTROL</p><h1>Settings</h1><p class="muted">Your library stays in this browser. Export a backup whenever you need it.</p></div>
         <div class="settings-grid">
-          <div class="panel settings-card"><div class="settings-symbol purple">⇧</div><h3>Export your library</h3><p>Download all courses, lessons, and completion progress as a JSON backup.</p><button class="primary-button" id="exportButton">Download backup <span>↓</span></button></div>
-          <div class="panel settings-card"><div class="settings-symbol green">⇩</div><h3>Import a backup</h3><p>Restore a previously exported FocusLearn JSON file. This replaces the current library.</p><label class="secondary-button file-button" for="importFile">Choose JSON file</label><input type="file" id="importFile" accept=".json,application/json" hidden></div>
-          <div class="panel settings-card danger-card"><div class="settings-symbol red">⌫</div><h3>Reset your library</h3><p>Permanently clear all courses and progress stored in this browser.</p><button class="danger-button" id="resetButton">Delete all data</button></div>
+          <div class="panel settings-card"><div class="settings-symbol purple">⇧</div><h3>Export your library</h3><p>Download all courses, lessons, completion progress, and saved pictures as a JSON backup.</p><button class="primary-button" id="exportButton">Download backup <span>↓</span></button></div>
+          <div class="panel settings-card"><div class="settings-symbol green">⇩</div><h3>Import a backup</h3><p>Restore a previously exported FocusLearn JSON file (including courses and saved pictures). This replaces the current library.</p><label class="secondary-button file-button" for="importFile">Choose JSON file</label><input type="file" id="importFile" accept=".json,application/json" hidden></div>
+          <div class="panel settings-card danger-card"><div class="settings-symbol red">⌫</div><h3>Reset your library</h3><p>Permanently clear all courses, progress, and saved pictures stored in this browser.</p><button class="danger-button" id="resetButton">Delete all data</button></div>
         </div>
-        <div class="privacy-note"><span>🔒</span><div><strong>Private by design</strong><p>FocusLearn has no account or backend. Courses, progress, and study sessions are stored locally in this browser. My Notes is a separate website with separate browser storage. YouTube playback is embedded from YouTube.</p></div></div>
+        <div class="privacy-note"><span>🔒</span><div><strong>Private by design</strong><p>FocusLearn has no account or backend. Courses, progress, study sessions, and visual pictures are stored locally in this browser. My Notes is a separate website with separate browser storage. YouTube playback is embedded from YouTube.</p></div></div>
       </section>
       <footer class="footer">FOCUSLEARN <span>·</span> A quieter way to learn.</footer>
     </main>
   </div>
+
+  <!-- Add/Edit Picture Modal -->
+  <div class="pic-modal-overlay" id="picModalOverlay" hidden>
+    <div class="pic-modal" role="dialog" aria-modal="true" aria-labelledby="picModalTitle">
+      <div class="pic-modal-head">
+        <h3 id="picModalTitle">Add picture</h3>
+        <button type="button" class="modal-close-btn" id="picModalClose" aria-label="Close dialog">✕</button>
+      </div>
+      <form id="picForm" class="pic-modal-form">
+        <input type="hidden" id="picId">
+        
+        <!-- Image Upload / Dropzone -->
+        <div>
+          <label>Picture file <span class="required">*</span></label>
+          <div class="pic-dropzone" id="picDropZone" tabindex="0">
+            <input type="file" id="picFileInput" accept="image/*" hidden>
+            <div class="dropzone-empty" id="picDropEmpty">
+              <span class="dropzone-icon">🖼</span>
+              <strong>Click to browse or drag &amp; drop an image</strong>
+              <small>PNG, JPG, WebP, GIF, SVG · Or press Ctrl+V to paste</small>
+            </div>
+            <div class="dropzone-preview" id="picDropPreview" hidden>
+              <img id="picPreviewImg" src="" alt="Selected picture preview">
+              <div class="preview-meta">
+                <span id="picPreviewInfo" class="small muted"></span>
+                <div class="preview-actions">
+                  <button type="button" class="mini-button" id="picChangeImgBtn">Change file</button>
+                  <button type="button" class="mini-button" id="picRotateBtn" title="Rotate 90 degrees clockwise">Rotate 90° ↻</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="pic-form-grid">
+          <div>
+            <label for="picTitleInput">Title <span class="required">*</span></label>
+            <input type="text" id="picTitleInput" maxlength="120" placeholder="e.g. React Component Lifecycle Diagram" required>
+          </div>
+          <div>
+            <label for="picCategoryInput">Category</label>
+            <select id="picCategoryInput">
+              <option value="Diagram">Diagram</option>
+              <option value="Formula">Formula</option>
+              <option value="Cheatsheet">Cheatsheet</option>
+              <option value="Lecture Note">Lecture Note</option>
+              <option value="Screenshot">Screenshot</option>
+              <option value="Mindmap">Mindmap</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label for="picCourseSelect">Link to course <span class="optional">Optional</span></label>
+          <select id="picCourseSelect">
+            <option value="">None (General)</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="picDetailsInput">Notes &amp; Details <span class="optional">Optional</span></label>
+          <textarea id="picDetailsInput" rows="4" maxlength="3000" placeholder="Write key formulas, explanations, reference links, or study notes for this image..."></textarea>
+        </div>
+
+        <div class="pic-modal-actions">
+          <button type="button" class="secondary-button" id="picCancelBtn">Cancel</button>
+          <button type="submit" class="primary-button" id="picSubmitBtn">Save picture <span>→</span></button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Picture Lightbox Viewer -->
+  <div class="pic-lightbox-overlay" id="picLightboxOverlay" hidden>
+    <div class="pic-lightbox" role="dialog" aria-modal="true" aria-labelledby="lightboxTitle">
+      <div class="pic-lightbox-main">
+        <button type="button" class="lightbox-close-btn" id="lightboxClose" aria-label="Close viewer">✕</button>
+        <div class="lightbox-img-wrapper" id="lightboxImgWrapper">
+          <img id="lightboxImg" src="" alt="Enlarged picture preview">
+        </div>
+        <div class="lightbox-img-bar">
+          <button type="button" class="mini-button" id="lightboxZoomToggle">🔍 Toggle zoom</button>
+          <button type="button" class="mini-button" id="lightboxDownloadBtn">⇩ Download image</button>
+        </div>
+      </div>
+      <aside class="pic-lightbox-sidebar">
+        <div class="lightbox-side-head">
+          <div class="pic-badge-group">
+            <span class="pic-category-badge" id="lightboxCategory"></span>
+            <span class="pic-course-badge" id="lightboxCourse" hidden></span>
+          </div>
+          <h2 id="lightboxTitle"></h2>
+          <small class="muted" id="lightboxDate"></small>
+        </div>
+        <div class="lightbox-details-wrap">
+          <label>NOTES &amp; DETAILS</label>
+          <div class="lightbox-details-text" id="lightboxDetails"></div>
+        </div>
+        <div class="lightbox-side-footer">
+          <button type="button" class="mini-button edit" id="lightboxEditBtn">✎ Edit details &amp; pic</button>
+          <button type="button" class="mini-button delete" id="lightboxDeleteBtn">⌫ Delete</button>
+        </div>
+      </aside>
+    </div>
+  </div>
+
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="app.js"></script>
 </body>

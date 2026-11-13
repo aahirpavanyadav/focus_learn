@@ -1,16 +1,28 @@
-# FocusLearn — Analytics + My Notes integration
+# FocusLearn — Pictures & Visual Notes, Analytics + My Notes integration
+
+FocusLearn is a distraction-free, privacy-first personal learning space built as a 100% static web application.
 
 ## Run
-Open `index.html` in a modern browser. No build step, framework, backend, database,
-external library, or API key is required.
+Open `index.html` in any modern web browser. No build step, framework, Node.js server, external database, API key, or backend is required.
 
-## New in this release
-- Learning Analytics page with total tracked study time, active days, current streak,
-  completed lesson count, last-seven-days activity chart, course progress, and recent sessions.
-- Manual study timer in the lesson player. Time is counted only while the timer is running
-  and the browser tab remains visible. Switching tabs or leaving the player saves the session.
-- My Notes workspace embedded from https://aahirpavanyadav.github.io/My-notes/ with an
-  “Open in new tab” fallback.
+## New Feature: Pictures & Visual Notes (Study Vault)
+Store, edit, save, and delete study pictures and visual notes directly in your browser without any backend:
+- **Save Pictures**:
+  - Upload diagrams, formula sheets, whiteboard captures, screenshots, and handwritten notes.
+  - Drag-and-drop onto the dropzone, click to browse files, or press `Ctrl+V` (`Cmd+V`) anywhere to paste directly from your clipboard.
+  - Add details for each picture: Title, Category (Diagram, Formula, Cheatsheet, Lecture Note, Screenshot, Mindmap, Other), optional Link to a Course, and detailed study notes.
+  - Automatic client-side canvas optimization: images are downscaled if oversized, saving space while maintaining crisp clarity.
+- **Edit Pictures & Details**:
+  - Edit picture title, category, linked course, and notes/explanations at any time.
+  - Rotate pictures 90° clockwise with the rotate tool (perfect for whiteboard or textbook phone snapshots).
+  - Replace or change the image file whenever needed.
+- **View in Fullscreen Lightbox**:
+  - Click any picture card to open an immersive high-resolution lightbox with zoom toggle and a full details sidebar.
+- **Delete Pictures**:
+  - Remove pictures with a single click and confirmation, instantly freeing client storage.
+- **Download & Backup**:
+  - Download original image files to your device.
+  - Complete JSON backup export and import in Settings (includes courses, study sessions, and all pictures).
 
 ## Existing features
 - Responsive dashboard, course management, learning player, and settings
@@ -20,25 +32,14 @@ external library, or API key is required.
 - Privacy-enhanced embedded YouTube playback
 - Mark lessons complete/incomplete and remember last watched lesson
 - Remove lessons and delete courses
-- Export/import JSON backups (now includes analytics sessions)
-- LocalStorage persistence
+- Edit course names, descriptions, and lesson titles/modules/URLs
+- Learning Analytics with tracked study time, active days, streak, and 7-day chart
+- Manual study timer in the lesson player with visibility detection
+- My Notes workspace embedded from https://aahirpavanyadav.github.io/My-notes/
+- Export/import full JSON backups
+- 100% client-side persistence (IndexedDB + localStorage)
 
-## Data and privacy limitations
-- FocusLearn data is stored in this browser's localStorage.
-- My Notes is a separate origin/domain and has its own browser storage. FocusLearn cannot
-  directly access its note contents or combine its backup with the FocusLearn JSON file.
-  Use the My Notes app's own Export function for its notes.
-- The My Notes host may disallow iframe embedding in some browser/hosting configurations.
-  If the embedded view is blank or blocked, click “Open in new tab”.
-- Study time is measured by the explicit FocusLearn timer, not by reading YouTube playback
-  state. The YouTube iframe does not provide reliable watch-time data to this static app.
-- YouTube thumbnails and videos need internet access; some videos disable embedding.
-- Static-only code cannot securely provide real multi-user accounts, cross-device sync,
-  or server-enforced admin/user permissions.
-
-
-## Notes page layout fix
-The My Notes iframe now has explicit full-width and tall responsive dimensions in both
-inline styles and the stylesheet, avoiding the browser's default small iframe dimensions.
-The fallback link is also available directly beneath the embedded workspace.
-\n\n### Editing courses and lessons\n- Use **Edit** beside any course to change its name and description.\n- Use **Edit** beside any lesson to change its title, module, and YouTube video URL.\n- Moving a lesson to an existing module with the same name places it there; otherwise the current module is renamed.\n- Completion status and other lesson progress are preserved when editing.\n
+## Data and privacy
+- FocusLearn data is stored directly in your browser (courses & sessions in `localStorage`, pictures in `IndexedDB`).
+- No user data is sent to any external server.
+- YouTube playback is embedded securely using YouTube's privacy-enhanced domain (`youtube-nocookie.com`).
