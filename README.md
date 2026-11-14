@@ -7,7 +7,21 @@ Open `index.html` in any modern web browser. No build step, framework, Node.js s
 
 ## Features
 
-### 1. Notes & PDF Library (Document Vault)
+### 1. Smart Instagram-Style Navbar & Mobile Bar
+FocusLearn features a clean, modern navigation architecture inspired by Instagram:
+- **Clean Desktop Topbar with Frosted Glassmorphism**:
+  - Replaced the fixed side navbar with an ultra-clean, sticky top navigation bar featuring background blur (`backdrop-filter: blur(20px)`), brand mark, pill tab links, live study indicators, and dynamic badge counters.
+  - Generates significant horizontal breathing room for the multi-course management view, responsive course cards, video player, and document vaults.
+  - **Insta-Inspired ＋ Create Button & Quick Menu**:
+    - Tap **＋ Create** to reveal a quick dropdown menu to instantaneously scaffold a **New Course**, add a **Single Video Lesson**, add a **YouTube Playlist**, upload a **Picture**, write a **Formatted Note**, or import a **PDF Document**.
+    - Fully accessible with keyboard navigation (`Escape` closes menu) and click-outside dismissal.
+  - **Quick Theme Mode Switcher**: Instant 1-click toggle between Dark Mode and White / Light Mode right in the navbar.
+  - **Settings & Profile Pill**: Fast access to appearance settings, color combos, and local storage status.
+- **Instagram-Style Mobile Bottom Bar**:
+  - Thumb-friendly fixed bottom bar on mobile screens (< 760px) with 6 iconic navigation tabs: `Home`, `Courses`, `Study`, `Pictures`, `Notes`, and `Settings`.
+  - Floating, non-intrusive layout optimized for one-handed mobile navigation.
+
+### 2. Notes & PDF Library (Document Vault)
 Store, edit, save, view, and delete both PDF documents and created study notes directly in your browser:
 - **Created Notes**:
   - Write notes directly in the in-page **Write Note** workspace or via the **＋ Create note** dialog.
@@ -24,7 +38,7 @@ Store, edit, save, view, and delete both PDF documents and created study notes d
 - **Search & Filters**: Search across all notes and PDFs by title, content, or details; filter by course, category, or document type.
 - **Player Integration**: Click **✎ Notes & PDFs** inside the video lesson player to view or create materials linked to the current course.
 
-### 2. Pictures & Visual Notes (Visual Study Vault)
+### 3. Pictures & Visual Notes (Visual Study Vault)
 - **Save Pictures**: Upload diagrams, formula sheets, whiteboard captures, screenshots, and handwritten notes.
 - **Clipboard Paste**: Press `Ctrl+V` (`Cmd+V`) anywhere to paste an image directly from your clipboard into your library.
 - **Automatic Optimization**: Client-side canvas downscaling for oversized photos to prevent storage bloat.
@@ -32,7 +46,7 @@ Store, edit, save, view, and delete both PDF documents and created study notes d
 - **Fullscreen Lightbox**: View full-resolution images with zoom toggle and details sidebar.
 - **Download & Delete**: Save picture files locally or remove them with confirmation.
 
-### 3. Courses, Multi-Course Smart Management & YouTube Playlists
+### 4. Courses, Multi-Course Smart Management & YouTube Playlists
 - Group lessons and playlists into customizable courses and organized modules.
 - **Smart Multi-Course Management (for managing dozens of courses)**:
   - **Live Search**: Instant real-time search across Course Titles, Categories, Descriptions, Module names, Lesson titles, and Playlist contents.
@@ -71,11 +85,11 @@ Store, edit, save, view, and delete both PDF documents and created study notes d
   - Mark lessons and playlists complete/incomplete; automatically remembers last watched position.
   - Distraction-free theatre mode, quick module drawer, and direct links to linked notes, PDFs, and visual diagrams.
 
-### 4. Learning Analytics
+### 5. Learning Analytics
 - Tracked study time, active days, streak, and 7-day consistency chart
 - Manual study timer in the lesson player with browser tab visibility detection
 
-### 5. Settings, Dark & White Themes, UI/UX Combos & Portability
+### 6. Settings, Dark & White Themes, UI/UX Combos & Portability
 - **Dark and White / Light Mode Engine**:
   - Seamless 1-click **☀️ White Theme / 🌙 Dark Theme toggle** in the Topbar header and in Settings.
   - **White / Light Theme**: Pure white studio canvas, crisp slate typography, gentle card elevations, high-contrast borders, and clean readability for bright daylight.

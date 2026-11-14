@@ -662,26 +662,46 @@
     timerInterval=setInterval(()=>{renderTimer();},1000);
     renderTimer();notify("Study timer started. Keep this tab visible while studying.");
   }
+  function updateNavBadges() {
+    const picBadge = $("#navPicBadge");
+    if (picBadge) {
+      picBadge.textContent = picturesList.length;
+      picBadge.hidden = picturesList.length === 0;
+    }
+    const docBadge = $("#navDocBadge");
+    if (docBadge) {
+      docBadge.textContent = docsList.length;
+      docBadge.hidden = docsList.length === 0;
+    }
+    const liveDot = $("#navLiveIndicator");
+    if (liveDot) {
+      liveDot.hidden = !(timerRunning || (currentLessonId && currentCourseId));
+    }
+  }
+
   function renderTimer(){
     const elapsed=timerRunning?timerElapsedBeforeStart+(Date.now()-timerStartedAt):timerElapsedBeforeStart;
     const display=$("#studyTimerDisplay"),button=$("#studyTimerToggle"),dot=$("#timerDot");
     if(display)display.textContent=fmtTime(elapsed);
     if(button)button.textContent=timerRunning?"Pause & save":"Start study";
     if(dot)dot.classList.toggle("running",timerRunning);
+    updateNavBadges();
   }
+
   function navigate(page){
     if(timerRunning && page!=="player")stopTimer(true);
     $$(".page").forEach(p=>p.classList.toggle("active",p.id===`page-${page}`));
-    $$(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.page===page));
-    const crumb=$("#pageCrumb"); if(crumb)crumb.textContent=({dashboard:"Dashboard",courses:"My courses",analytics:"Analytics",pictures:"Pictures",notes:"Notes & PDFs",settings:"Settings",player:"Learning"}[page]||"Dashboard");
-    $("#sidebar")?.classList.remove("open");
+    $$(".nav-link, .mobile-nav-item, .nav-settings-btn").forEach(b => {
+      b.classList.toggle("active", b.dataset.page === page);
+    });
+    updateNavBadges();
     if(page==="dashboard")renderDashboard();
     if(page==="courses")renderManagement();
     if(page==="analytics")renderAnalytics();
     if(page==="pictures")renderPictures();
     if(page==="notes")renderDocuments();
     if(page==="settings")renderThemeCards();
-    window.scrollTo({top:0,behavior:"smooth"});
+    if (typeof window.scrollTo === "function") window.scrollTo({top:0,behavior:"smooth"});
   }
   function renderDashboard(){
     state.courses.forEach(c => {
@@ -691,9 +711,9 @@
 
     const total = state.courses.reduce((n,c) => n + lessons(c).length, 0);
     const done = state.courses.reduce((n,c) => n + stats(c).done, 0);
-    $("#statCourses").textContent = state.courses.length;
-    $("#statCompleted").textContent = done;
-    $("#statProgress").textContent = total ? Math.round(done / total * 100) + "%" : "0%";
+    const sc = $("#statCourses"); if (sc) sc.textContent = state.courses.length;
+    const sDone = $("#statCompleted"); if (sDone) sDone.textContent = done;
+    const sp = $("#statProgress"); if (sp) sp.textContent = total ? Math.round(done / total * 100) + "%" : "0%";
     const picStat = $("#statPictures");
     if (picStat) picStat.textContent = picturesList.length;
     const docStat = $("#statDocs");
@@ -729,10 +749,11 @@
       return true;
     });
 
-    $("#dashboardEmpty").hidden = state.courses.length > 0;
+    const de = $("#dashboardEmpty"); if (de) de.hidden = state.courses.length > 0;
 
     if (state.courses.length > 0 && filteredCourses.length === 0) {
-      $("#dashboardCourses").innerHTML = `
+      const dc = $("#dashboardCourses");
+      if (dc) dc.innerHTML = `
         <div class="empty-state compact" style="grid-column: 1 / -1; margin-top: 0">
           <div class="empty-art">🔍</div>
           <h3>No matching courses</h3>
@@ -743,7 +764,8 @@
       return;
     }
 
-    $("#dashboardCourses").innerHTML = filteredCourses.map(c => {
+    const dc = $("#dashboardCourses");
+    if (dc) dc.innerHTML = filteredCourses.map(c => {
       const s = stats(c), last = lessons(c).find(l => l.id === c.lastWatched) || lessons(c)[0];
       return `
         <article class="course-card" data-open-course="${c.id}" tabindex="0" role="button">
@@ -781,14 +803,14 @@
     updateDocCourseOptions();
 
     const totalCourses = state.courses.length;
-    $("#courseCountLabel").textContent = `${totalCourses} course${totalCourses === 1 ? "" : "s"}`;
-    $("#managementEmpty").hidden = totalCourses > 0;
+    const ccl = $("#courseCountLabel"); if (ccl) ccl.textContent = `${totalCourses} course${totalCourses === 1 ? "" : "s"}`;
+    const me = $("#managementEmpty"); if (me) me.hidden = totalCourses > 0;
 
     const mgmtBar = $("#mgmtControlsBar");
     if (mgmtBar) mgmtBar.hidden = totalCourses === 0;
 
     if (totalCourses === 0) {
-      $("#managementCourses").innerHTML = "";
+      const mc = $("#managementCourses"); if (mc) mc.innerHTML = "";
       return;
     }
 
@@ -1017,6 +1039,7 @@
 
   function renderPictures() {
     updatePicCourseOptions();
+    updateNavBadges();
     const countEl = $("#statPictures");
     if (countEl) countEl.textContent = picturesList.length;
 
@@ -1123,7 +1146,7 @@
       $("#picCourseSelect").value = courseId;
     }
     $("#picModalOverlay").hidden = false;
-    $("#picTitleInput").focus();
+    $("#picTitleInput")?.focus();
   }
 
   function openEditPicModal(id) {
@@ -1153,7 +1176,7 @@
 
     closeLightbox();
     $("#picModalOverlay").hidden = false;
-    $("#picTitleInput").focus();
+    $("#picTitleInput")?.focus();
   }
 
   function closePicModal() {
@@ -1243,6 +1266,7 @@
 
   function renderDocuments() {
     updateDocCourseOptions();
+    updateNavBadges();
 
     const notesCount = docsList.filter(d => d.type === "note").length;
     const pdfsCount = docsList.filter(d => d.type === "pdf").length;
@@ -1685,6 +1709,7 @@
     renderPictures();
     renderDocuments();
     renderThemeCards();
+    updateNavBadges();
     if($("#page-analytics")?.classList.contains("active"))renderAnalytics();
   }
 
@@ -2858,14 +2883,17 @@
     // Add content mode tabs (video / playlist / bulk)
     const addModeTab = e.target.closest("[data-add-mode]");
     if (addModeTab) {
-      const mode = addModeTab.dataset.addMode;
-      $$(".type-tab-btn").forEach(b => b.classList.toggle("active", b.dataset.addMode === mode));
-      const lForm = $("#lessonForm"); if (lForm) lForm.hidden = (mode !== "video");
-      const pForm = $("#playlistForm"); if (pForm) pForm.hidden = (mode !== "playlist");
-      const bForm = $("#bulkForm"); if (bForm) bForm.hidden = (mode !== "bulk");
+      switchAddMode(addModeTab.dataset.addMode);
       return;
     }
   });
+
+  function switchAddMode(mode) {
+    $$(".type-tab-btn").forEach(b => b.classList.toggle("active", b.dataset.addMode === mode));
+    const lForm = $("#lessonForm"); if (lForm) lForm.hidden = (mode !== "video");
+    const pForm = $("#playlistForm"); if (pForm) pForm.hidden = (mode !== "playlist");
+    const bForm = $("#bulkForm"); if (bForm) bForm.hidden = (mode !== "bulk");
+  }
 
   // Document Filters & Search
   $("#docSearchInput")?.addEventListener("input", e => {
@@ -2959,6 +2987,56 @@
 
   // Global Click Handlers
   document.addEventListener("click", e => {
+    // Quick Create Button Toggle
+    const qcBtn = e.target.closest("#quickCreateBtn");
+    if (qcBtn) {
+      e.preventDefault();
+      const menu = $("#quickCreateMenu");
+      if (menu) {
+        const willShow = menu.hidden;
+        menu.hidden = !willShow;
+        qcBtn.setAttribute("aria-expanded", String(willShow));
+      }
+      return;
+    }
+
+    // Quick Create Action Click
+    const qcItem = e.target.closest("[data-qc-action]");
+    if (qcItem) {
+      const menu = $("#quickCreateMenu");
+      if (menu) menu.hidden = true;
+      $("#quickCreateBtn")?.setAttribute("aria-expanded", "false");
+      const act = qcItem.dataset.qcAction;
+      if (act === "course") {
+        navigate("courses");
+        setTimeout(() => $("#courseName")?.focus(), 80);
+      } else if (act === "video") {
+        navigate("courses");
+        switchAddMode("video");
+        setTimeout(() => $("#videoUrl")?.focus(), 80);
+      } else if (act === "playlist") {
+        navigate("courses");
+        switchAddMode("playlist");
+        setTimeout(() => $("#playlistUrl")?.focus(), 80);
+      } else if (act === "picture") {
+        openAddPicModal();
+      } else if (act === "note") {
+        openAddNoteModal();
+      } else if (act === "pdf") {
+        openAddPdfModal();
+      }
+      return;
+    }
+
+    // Click outside Quick Create Dropdown
+    if (!e.target.closest("#quickCreateDropdown")) {
+      const menu = $("#quickCreateMenu");
+      if (menu && !menu.hidden) {
+        menu.hidden = true;
+        $("#quickCreateBtn")?.setAttribute("aria-expanded", "false");
+      }
+    }
+
     const n = e.target.closest("[data-page]"); if (n) { navigate(n.dataset.page); return; }
     const go = e.target.closest("[data-go]"); if (go) { navigate(go.dataset.go); return; }
     const op = e.target.closest("[data-open-course]"); if (op) { openCourse(op.dataset.openCourse); return; }
@@ -3251,6 +3329,12 @@
   // Keyboard navigation & accessibility
   document.addEventListener("keydown", e => {
     if (e.key === "Escape") {
+      const qcMenu = $("#quickCreateMenu");
+      if (qcMenu && !qcMenu.hidden) {
+        qcMenu.hidden = true;
+        $("#quickCreateBtn")?.setAttribute("aria-expanded", "false");
+        return;
+      }
       if (!$("#editCourseModalOverlay")?.hidden) { closeEditCourseModal(); return; }
       if (!$("#playlistVideoModalOverlay")?.hidden) { closePlaylistVideoModal(); return; }
       if (!$("#playlistPasteModalOverlay")?.hidden) { closePlaylistPasteModal(); return; }
@@ -3290,7 +3374,6 @@
   $("#studyTimerToggle")?.addEventListener("click", () => { if (timerRunning) stopTimer(); else startTimer(); });
   document.addEventListener("visibilitychange", () => { if (document.hidden && timerRunning) stopTimer(true); });
   $("#backToCourses")?.addEventListener("click", () => navigate("courses"));
-  $("#menuToggle")?.addEventListener("click", () => $("#sidebar")?.classList.toggle("open"));
 
   // Settings: Export, Import, Reset
   $("#exportButton")?.addEventListener("click", async () => {
