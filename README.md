@@ -32,8 +32,20 @@ Store, edit, save, view, and delete both PDF documents and created study notes d
 - **Fullscreen Lightbox**: View full-resolution images with zoom toggle and details sidebar.
 - **Download & Delete**: Save picture files locally or remove them with confirmation.
 
-### 3. Courses, Playlists & Lesson Management
+### 3. Courses, Multi-Course Smart Management & YouTube Playlists
 - Group lessons and playlists into customizable courses and organized modules.
+- **Smart Multi-Course Management (for managing dozens of courses)**:
+  - **Live Search**: Instant real-time search across Course Titles, Categories, Descriptions, Module names, Lesson titles, and Playlist contents.
+  - **Category Filtering & Badges**: Organize courses with clear categories (Programming, Computer Science & AI, Design & UI/UX, Academics & Science, Languages, Business & Finance, Personal Development, General, Other).
+  - **Status Filtering**: Instantly isolate courses by completion state (`All Status`, `In progress 1-99%`, `Completed 100%`, `Not started 0%`).
+  - **Sort Options**: Sort by `Recently added`, `Title (A-Z)`, `Title (Z-A)`, `Progress (Highest)`, `Progress (Lowest)`, `Most lessons`, and `Oldest first`.
+  - **Collapsible Course Cards (Accordion)**:
+    - Click any course card header (or chevron `▼`/`▶`) to collapse or expand its modules and lessons.
+    - Collapsed courses transform into sleek, compact summary cards showing title, category badge, lesson count, module breakdown, and inline progress bar.
+    - One-click **▼ Expand all** and **▲ Collapse all** toggles to view your entire curriculum or keep a zero-clutter workspace.
+  - **Sleek Course Editor Modal**: Edit Course Name, Category, and Description with a clean modal dialog.
+  - **Dashboard Multi-Course Search & Quick Filters**: Search and filter courses directly from the main Dashboard hub.
+
 - **YouTube Playlist Support & Dedicated Side Panel**:
   - Add full YouTube playlists by playlist URL (`youtube.com/playlist?list=...`) or playlist ID (`PL...`, `UU...`, `FL...`, `RD...`, `OLAK...`).
   - **Dedicated Playlist Side Panel in Learning Space**:
@@ -63,17 +75,21 @@ Store, edit, save, view, and delete both PDF documents and created study notes d
 - Tracked study time, active days, streak, and 7-day consistency chart
 - Manual study timer in the lesson player with browser tab visibility detection
 
-### 5. Settings, UI/UX Themes & Complete Backup Portability
+### 5. Settings, Dark & White Themes, UI/UX Combos & Portability
+- **Dark and White / Light Mode Engine**:
+  - Seamless 1-click **☀️ White Theme / 🌙 Dark Theme toggle** in the Topbar header and in Settings.
+  - **White / Light Theme**: Pure white studio canvas, crisp slate typography, gentle card elevations, high-contrast borders, and clean readability for bright daylight.
+  - **Dark Theme**: Deep obsidian surfaces, high contrast, reduced eye fatigue, and glowing accents for late-night sessions.
 - **UI/UX Color Combos & Themes Panel**:
   - Choose between 5 carefully tuned color combinations designed for long study sessions:
-    1. **Cosmic Violet** (Default): Midnight navy with vibrant electric violet.
-    2. **Emerald Mint**: Forest obsidian with sage & lush emerald mint.
-    3. **Cyberpunk Amber**: Warm carbon slate with luminous amber gold.
-    4. **Oceanic Cyan**: Arctic sapphire with electric neon cyan & sky blue.
-    5. **Crimson Rose**: Dark ruby charcoal with glowing coral & rose.
-  - Every UI element dynamically updates: buttons, navigation, cards, player borders, progress bars, swatches, focus rings, and badges.
-  - Theme choices persist in `localStorage` and are preserved across sessions and JSON backups.
-- **Export Backup**: Download a single JSON file containing all your courses, modules, lessons, playlist videos, analytics sessions, visual pictures, created notes, stored PDFs, and theme preferences.
+    1. **Cosmic Violet** (Default): Electric violet & purple.
+    2. **Emerald Mint**: Fresh forest sage & lush emerald mint.
+    3. **Cyberpunk Amber**: Radiant golden amber & honey slate.
+    4. **Oceanic Cyan**: Nordic arctic cyan & sky blue.
+    5. **Crimson Rose**: Vibrant ruby coral & rose.
+  - Every UI element dynamically updates in both dark and white modes: sidebar, topbar, cards, inputs, buttons, video player, playlist panel, notes reader, pdf viewer, lightbox, analytics charts, and badges.
+  - Theme mode and palette choices persist in `localStorage` and are preserved across sessions and JSON backups.
+- **Export Backup**: Download a single JSON file containing all your courses, modules, lessons, playlist videos, analytics sessions, visual pictures, created notes, stored PDFs, and theme settings.
 - **Import Backup**: Restore your complete library on any device or browser.
 - **Reset Library**: Clear all courses, pictures, notes, and PDFs from client storage with confirmation.
 

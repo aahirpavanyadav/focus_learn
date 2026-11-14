@@ -32,7 +32,13 @@
       <header class="topbar">
         <button class="mobile-menu icon-button" id="menuToggle" aria-label="Toggle menu">☰</button>
         <div class="breadcrumb">Workspace <span>/</span> <strong id="pageCrumb">Dashboard</strong></div>
-        <div class="top-actions"><span class="local-badge"><i></i> Saved on this device</span></div>
+        <div class="top-actions">
+          <button type="button" class="theme-mode-btn" id="themeModeToggle" title="Toggle dark / white theme" aria-label="Toggle dark and white theme">
+            <span class="theme-mode-icon" id="themeModeIcon">☀️</span>
+            <span class="theme-mode-text" id="themeModeText">White theme</span>
+          </button>
+          <span class="local-badge"><i></i> Saved on this device</span>
+        </div>
       </header>
 
       <section class="page active" id="page-dashboard">
@@ -48,6 +54,27 @@
           <article class="stat-card" style="cursor:pointer;" data-go="notes"><span class="stat-icon purple">✎</span><div><small>Notes &amp; PDFs</small><strong id="statDocs">0</strong></div></article>
         </div>
         <div class="section-heading"><div><p class="eyebrow">YOUR LIBRARY</p><h2>Continue learning</h2></div><button class="text-button" data-go="courses">Manage courses <span>→</span></button></div>
+
+        <!-- Dashboard Multi-Course Search & Filter Bar -->
+        <div class="dash-filter-bar" id="dashFilterBar" hidden>
+          <div class="dash-search-box">
+            <span class="search-icon">🔍</span>
+            <input type="search" id="dashCourseSearch" placeholder="Search your courses...">
+            <button type="button" class="clear-search-btn" id="dashSearchClear" hidden title="Clear search">✕</button>
+          </div>
+          <div class="dash-filter-controls">
+            <select id="dashCategoryFilter">
+              <option value="">All categories</option>
+            </select>
+            <select id="dashStatusFilter">
+              <option value="">All status</option>
+              <option value="in_progress">In progress</option>
+              <option value="completed">Completed</option>
+              <option value="not_started">Not started</option>
+            </select>
+          </div>
+        </div>
+
         <div class="course-grid" id="dashboardCourses"></div>
         <div class="empty-state" id="dashboardEmpty"><div class="empty-art">▤</div><h3>Your learning space is ready</h3><p>Add a course and turn your YouTube watchlist into a structured learning path.</p><button class="primary-button" data-go="courses">＋ Create your first course</button></div>
       </section>
@@ -87,7 +114,25 @@
         <div class="management-layout">
           <div class="panel create-panel">
             <div class="panel-title"><div><span class="step">01</span><h3>Create a course</h3></div></div>
-            <form id="courseForm"><label for="courseName">Course name</label><input id="courseName" maxlength="70" placeholder="e.g. JavaScript Mastery" required><label for="courseDescription">Description <span class="optional">Optional</span></label><textarea id="courseDescription" rows="3" maxlength="180" placeholder="What will you learn?"></textarea><button class="primary-button full" type="submit">Create course <span>→</span></button></form>
+            <form id="courseForm">
+              <label for="courseName">Course name</label>
+              <input id="courseName" maxlength="70" placeholder="e.g. JavaScript Mastery" required>
+              <label for="courseCategory">Category</label>
+              <select id="courseCategory">
+                <option value="Programming">Programming &amp; Web Dev</option>
+                <option value="Computer Science">Computer Science &amp; AI</option>
+                <option value="Design">Design &amp; UI/UX</option>
+                <option value="Academics">Academics &amp; Science</option>
+                <option value="Languages">Languages</option>
+                <option value="Business">Business &amp; Finance</option>
+                <option value="Personal">Personal Development</option>
+                <option value="General" selected>General</option>
+                <option value="Other">Other</option>
+              </select>
+              <label for="courseDescription">Description <span class="optional">Optional</span></label>
+              <textarea id="courseDescription" rows="3" maxlength="180" placeholder="What will you learn?"></textarea>
+              <button class="primary-button full" type="submit">Create course <span>→</span></button>
+            </form>
           </div>
           <div class="panel add-panel">
             <div class="panel-title"><div><span class="step">02</span><h3>Add content to course</h3></div></div>
@@ -139,6 +184,53 @@
           </div>
         </div>
         <div class="section-heading list-heading"><div><p class="eyebrow">STRUCTURE</p><h2>All courses</h2></div><span class="muted small" id="courseCountLabel">0 courses</span></div>
+
+        <!-- Multi-Course Smart Management Toolbar -->
+        <div class="mgmt-controls-bar" id="mgmtControlsBar">
+          <div class="mgmt-toolbar-row">
+            <div class="mgmt-search-wrap">
+              <span class="search-icon">🔍</span>
+              <input type="search" id="mgmtCourseSearch" placeholder="Search courses, modules, lessons, playlists...">
+              <button type="button" class="clear-search-btn" id="mgmtSearchClear" hidden title="Clear search">✕</button>
+            </div>
+            <div class="mgmt-filters-wrap">
+              <select id="mgmtCategoryFilter">
+                <option value="">All categories</option>
+              </select>
+              <select id="mgmtStatusFilter">
+                <option value="">All status</option>
+                <option value="in_progress">In progress (1-99%)</option>
+                <option value="completed">Completed (100%)</option>
+                <option value="not_started">Not started (0%)</option>
+              </select>
+              <select id="mgmtSortSelect">
+                <option value="newest">Recently added</option>
+                <option value="az">Title (A-Z)</option>
+                <option value="za">Title (Z-A)</option>
+                <option value="progress_desc">Progress (Highest)</option>
+                <option value="progress_asc">Progress (Lowest)</option>
+                <option value="lessons_desc">Most lessons</option>
+                <option value="oldest">Oldest first</option>
+              </select>
+            </div>
+            <div class="mgmt-btn-group">
+              <button type="button" class="mini-button" id="mgmtExpandAllBtn" title="Expand all course modules and lessons">▼ Expand all</button>
+              <button type="button" class="mini-button" id="mgmtCollapseAllBtn" title="Collapse courses into compact cards">▲ Collapse all</button>
+            </div>
+          </div>
+          <div class="mgmt-stats-strip">
+            <div class="mgmt-pill-group">
+              <span class="mgmt-stat-pill" id="mgmtPillTotal">0 Courses</span>
+              <span class="mgmt-stat-pill" id="mgmtPillActive">0 In Progress</span>
+              <span class="mgmt-stat-pill" id="mgmtPillCompleted">0 Completed</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span id="mgmtFilterStatusLabel">Showing all courses</span>
+              <button type="button" class="text-button" id="mgmtResetFilterBtn" hidden>Reset filters</button>
+            </div>
+          </div>
+        </div>
+
         <div id="managementCourses" class="management-courses"></div>
         <div class="empty-state compact" id="managementEmpty"><div class="empty-art">＋</div><h3>No courses yet</h3><p>Create a course to start organizing your lessons.</p></div>
       </section>
@@ -392,15 +484,40 @@
           </div>
         </div>
 
-        <!-- UI / UX Appearance & Color Combos Panel -->
+        <!-- UI / UX Appearance & Theme Customizer Panel -->
         <div class="panel theme-settings-panel">
           <div class="theme-panel-head">
             <div>
               <p class="eyebrow">UI / UX APPEARANCE</p>
-              <h2>Color Combo &amp; Theme</h2>
-              <p class="muted">Select from 5 carefully tuned color combinations. Every component, card, button, border, and player updates instantly.</p>
+              <h2>Theme &amp; Visual Style</h2>
+              <p class="muted">Switch between Dark and White theme, and choose your favorite color combination. Optimized for any screen, device, and daylight level.</p>
             </div>
             <span class="theme-active-indicator" id="themeActiveIndicator">Current: Cosmic Violet</span>
+          </div>
+
+          <!-- Base Mode Switcher (Dark vs White) -->
+          <div class="mode-switcher-grid" style="margin-bottom:22px">
+            <div class="mode-card active" id="modeCardDark" role="button" tabindex="0" data-mode-choice="dark">
+              <div class="mode-card-icon">🌙</div>
+              <div class="mode-card-info">
+                <strong>Dark Mode</strong>
+                <small>Deep obsidian canvas, high contrast, reduced eye fatigue, glowing accents.</small>
+              </div>
+              <span class="mode-card-badge">Default</span>
+            </div>
+            <div class="mode-card" id="modeCardLight" role="button" tabindex="0" data-mode-choice="light">
+              <div class="mode-card-icon">☀️</div>
+              <div class="mode-card-info">
+                <strong>White / Light Mode</strong>
+                <small>Pure white studio canvas, crisp slate typography, optimal daylight reading.</small>
+              </div>
+              <span class="mode-card-badge">Studio</span>
+            </div>
+          </div>
+
+          <div style="margin-bottom:12px">
+            <strong style="font-size:12px;color:var(--text);letter-spacing:.3px">ACCENT COLOR COMBINATIONS</strong>
+            <p class="muted small" style="margin:4px 0 0">Carefully tuned palettes that look stunning in both Dark and White modes.</p>
           </div>
           <div class="theme-grid" id="themeCardsGrid"></div>
         </div>
@@ -822,6 +939,45 @@
         <div class="pic-modal-actions">
           <button type="button" class="secondary-button" id="ppmCancelBtn">Cancel</button>
           <button type="submit" class="primary-button" id="ppmSubmitBtn">Import videos <span>＋</span></button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Course Modal -->
+  <div class="pic-modal-overlay" id="editCourseModalOverlay" hidden>
+    <div class="pic-modal" role="dialog" aria-modal="true" aria-labelledby="editCourseModalTitle">
+      <div class="pic-modal-head">
+        <h3 id="editCourseModalTitle">Edit course</h3>
+        <button type="button" class="modal-close-btn" id="editCourseModalClose" aria-label="Close dialog">✕</button>
+      </div>
+      <form id="editCourseForm" class="pic-modal-form">
+        <input type="hidden" id="editCourseIdInput">
+        <div>
+          <label for="editCourseNameInput">Course name <span class="required">*</span></label>
+          <input type="text" id="editCourseNameInput" maxlength="70" required>
+        </div>
+        <div>
+          <label for="editCourseCategorySelect">Category</label>
+          <select id="editCourseCategorySelect">
+            <option value="Programming">Programming &amp; Web Dev</option>
+            <option value="Computer Science">Computer Science &amp; AI</option>
+            <option value="Design">Design &amp; UI/UX</option>
+            <option value="Academics">Academics &amp; Science</option>
+            <option value="Languages">Languages</option>
+            <option value="Business">Business &amp; Finance</option>
+            <option value="Personal">Personal Development</option>
+            <option value="General">General</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div>
+          <label for="editCourseDescInput">Description <span class="optional">Optional</span></label>
+          <textarea id="editCourseDescInput" rows="3" maxlength="180" placeholder="What will you learn?"></textarea>
+        </div>
+        <div class="pic-modal-actions">
+          <button type="button" class="secondary-button" id="editCourseCancelBtn">Cancel</button>
+          <button type="submit" class="primary-button" id="editCourseSaveBtn">Save changes <span>✓</span></button>
         </div>
       </form>
     </div>

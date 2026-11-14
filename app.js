@@ -38,6 +38,20 @@
     sort: "newest"
   };
   const expandedPlaylistIds = new Set();
+  const collapsedCourseIds = new Set();
+
+  let mgmtFilterState = {
+    search: "",
+    category: "",
+    status: "",
+    sort: "newest"
+  };
+
+  let dashFilterState = {
+    search: "",
+    category: "",
+    status: ""
+  };
 
   const THEMES = [
     {
@@ -45,39 +59,79 @@
       name: "Cosmic Violet",
       desc: "Midnight navy with vibrant electric violet",
       badge: "Original Focus",
-      swatches: ["#0f1015", "#171920", "#9b8cff", "#71d6a1"]
+      swatches: ["#0f1015", "#171920", "#9b8cff", "#71d6a1"],
+      lightSwatches: ["#ffffff", "#f1f5f9", "#6d28d9", "#059669"]
     },
     {
       id: "emerald",
       name: "Emerald Mint",
       desc: "Forest obsidian with sage & lush mint",
       badge: "Calm & Clarity",
-      swatches: ["#09120e", "#101c16", "#4ade80", "#eab308"]
+      swatches: ["#09120e", "#101c16", "#4ade80", "#eab308"],
+      lightSwatches: ["#ffffff", "#f1f5f9", "#059669", "#d97706"]
     },
     {
       id: "amber",
       name: "Cyberpunk Amber",
       desc: "Warm carbon slate with radiant amber gold",
       badge: "High Energy",
-      swatches: ["#13110d", "#1c1913", "#f59e0b", "#34d399"]
+      swatches: ["#13110d", "#1c1913", "#f59e0b", "#34d399"],
+      lightSwatches: ["#ffffff", "#f1f5f9", "#d97706", "#059669"]
     },
     {
       id: "cyan",
       name: "Oceanic Cyan",
       desc: "Arctic sapphire with neon cyan & sky blue",
       badge: "Nordic Crisp",
-      swatches: ["#0a1118", "#101c26", "#38bdf8", "#34d399"]
+      swatches: ["#0a1118", "#101c26", "#38bdf8", "#34d399"],
+      lightSwatches: ["#ffffff", "#f1f5f9", "#0284c7", "#059669"]
     },
     {
       id: "rose",
       name: "Crimson Rose",
       desc: "Dark ruby night with glowing coral & rose",
       badge: "Vibrant Studio",
-      swatches: ["#140e12", "#1f141a", "#fb7185", "#fbbf24"]
+      swatches: ["#140e12", "#1f141a", "#fb7185", "#fbbf24"],
+      lightSwatches: ["#ffffff", "#f1f5f9", "#e11d48", "#059669"]
     }
   ];
 
+  let currentThemeMode = localStorage.getItem("focuslearn.themeMode") || "dark";
   let currentTheme = localStorage.getItem("focuslearn.theme") || "cosmic";
+
+  function applyThemeMode(mode, notifyUser = false) {
+    currentThemeMode = (mode === "light") ? "light" : "dark";
+    document.documentElement.setAttribute("data-mode", currentThemeMode);
+    localStorage.setItem("focuslearn.themeMode", currentThemeMode);
+
+    // Update Topbar Toggle Button
+    const modeIcon = $("#themeModeIcon");
+    const modeText = $("#themeModeText");
+    if (modeIcon && modeText) {
+      if (currentThemeMode === "light") {
+        modeIcon.textContent = "🌙";
+        modeText.textContent = "Dark theme";
+      } else {
+        modeIcon.textContent = "☀️";
+        modeText.textContent = "White theme";
+      }
+    }
+
+    // Update Settings Mode Cards
+    const darkCard = $("#modeCardDark");
+    const lightCard = $("#modeCardLight");
+    if (darkCard && lightCard) {
+      darkCard.classList.toggle("active", currentThemeMode === "dark");
+      lightCard.classList.toggle("active", currentThemeMode === "light");
+    }
+
+    updateThemeIndicator();
+    renderThemeCards();
+
+    if (notifyUser) {
+      notify(currentThemeMode === "light" ? "Switched to White / Light theme." : "Switched to Dark theme.");
+    }
+  }
 
   function applyTheme(themeId, notifyUser = false) {
     const t = THEMES.find(x => x.id === themeId) || THEMES[0];
@@ -85,14 +139,18 @@
     document.documentElement.setAttribute("data-theme", t.id);
     localStorage.setItem("focuslearn.theme", t.id);
 
+    updateThemeIndicator();
+    renderThemeCards();
+
+    if (notifyUser) notify(`Theme accent set to ${t.name}.`);
+  }
+
+  function updateThemeIndicator() {
     const ind = $("#themeActiveIndicator");
-    if (ind) ind.textContent = `Current: ${t.name}`;
-
-    $$(".theme-card").forEach(c => {
-      c.classList.toggle("active", c.dataset.themeId === t.id);
-    });
-
-    if (notifyUser) notify(`Theme changed to ${t.name}.`);
+    if (!ind) return;
+    const t = THEMES.find(x => x.id === currentTheme) || THEMES[0];
+    const modeLabel = currentThemeMode === "light" ? "White Theme" : "Dark Theme";
+    ind.textContent = `Current: ${modeLabel} · ${t.name}`;
   }
 
   function renderThemeCards() {
@@ -100,6 +158,7 @@
     if (!grid) return;
     grid.innerHTML = THEMES.map(t => {
       const isActive = currentTheme === t.id;
+      const swatches = currentThemeMode === "light" ? t.lightSwatches : t.swatches;
       return `
         <div class="theme-card ${isActive ? "active" : ""}" data-theme-id="${t.id}" role="button" tabindex="0">
           <div class="theme-card-header">
@@ -107,7 +166,7 @@
             <span class="theme-card-check">✓ Active</span>
           </div>
           <div class="theme-swatches">
-            ${t.swatches.map(c => `<span class="theme-swatch" style="background:${c}"></span>`).join("")}
+            ${swatches.map(c => `<span class="theme-swatch" style="background:${c}"></span>`).join("")}
           </div>
           <p class="theme-card-desc">${esc(t.desc)}</p>
           <span class="theme-card-badge">${esc(t.badge)}</span>
@@ -625,20 +684,94 @@
     window.scrollTo({top:0,behavior:"smooth"});
   }
   function renderDashboard(){
-    const total=state.courses.reduce((n,c)=>n+lessons(c).length,0),done=state.courses.reduce((n,c)=>n+stats(c).done,0);
-    $("#statCourses").textContent=state.courses.length;$("#statCompleted").textContent=done;$("#statProgress").textContent=total?Math.round(done/total*100)+"%":"0%";
+    state.courses.forEach(c => {
+      if (!c.category) c.category = "General";
+      if (!c.createdAt) c.createdAt = Date.now();
+    });
+
+    const total = state.courses.reduce((n,c) => n + lessons(c).length, 0);
+    const done = state.courses.reduce((n,c) => n + stats(c).done, 0);
+    $("#statCourses").textContent = state.courses.length;
+    $("#statCompleted").textContent = done;
+    $("#statProgress").textContent = total ? Math.round(done / total * 100) + "%" : "0%";
     const picStat = $("#statPictures");
-    if(picStat) picStat.textContent = picturesList.length;
+    if (picStat) picStat.textContent = picturesList.length;
     const docStat = $("#statDocs");
-    if(docStat) docStat.textContent = docsList.length;
-    $("#dashboardEmpty").hidden=state.courses.length>0;
-    $("#dashboardCourses").innerHTML=state.courses.map(c=>{
-      const s=stats(c),last=lessons(c).find(l=>l.id===c.lastWatched)||lessons(c)[0];
-      return `<article class="course-card" data-open-course="${c.id}" tabindex="0" role="button"><div class="course-cover"><span class="cover-tag">LEARNING PATH</span></div><div class="course-body"><h3>${esc(c.name)}</h3><p>${esc(c.description||"Your personal learning path")}</p><div class="course-meta"><span>${s.done}/${s.total} lessons</span><span>${s.pct}%</span></div><div class="progress-track"><span style="width:${s.pct}%"></span></div>${last?`<small class="muted" style="display:block;margin-top:11px;font-size:10px">Continue: ${esc(last.title)}</small>`:""}</div></article>`;
+    if (docStat) docStat.textContent = docsList.length;
+
+    const dashFilterBar = $("#dashFilterBar");
+    if (dashFilterBar) {
+      dashFilterBar.hidden = state.courses.length <= 1;
+
+      // Populate dashboard category filter
+      const catSelect = $("#dashCategoryFilter");
+      if (catSelect) {
+        const uniqueCats = Array.from(new Set(state.courses.map(c => c.category || "General"))).sort();
+        const currentSel = dashFilterState.category;
+        catSelect.innerHTML = '<option value="">All categories</option>' + uniqueCats.map(cat => `<option value="${cat}" ${currentSel === cat ? "selected" : ""}>${esc(cat)}</option>`).join("");
+      }
+    }
+
+    // Filter courses on dashboard
+    let filteredCourses = state.courses.filter(c => {
+      const s = stats(c);
+      if (dashFilterState.category && (c.category || "General") !== dashFilterState.category) return false;
+      if (dashFilterState.status === "in_progress" && !(s.done > 0 && s.done < s.total)) return false;
+      if (dashFilterState.status === "completed" && !(s.pct === 100 && s.total > 0)) return false;
+      if (dashFilterState.status === "not_started" && !(s.done === 0)) return false;
+      if (dashFilterState.search) {
+        const q = dashFilterState.search.toLowerCase();
+        const matchName = (c.name || "").toLowerCase().includes(q);
+        const matchCat = (c.category || "").toLowerCase().includes(q);
+        const matchDesc = (c.description || "").toLowerCase().includes(q);
+        if (!matchName && !matchCat && !matchDesc) return false;
+      }
+      return true;
+    });
+
+    $("#dashboardEmpty").hidden = state.courses.length > 0;
+
+    if (state.courses.length > 0 && filteredCourses.length === 0) {
+      $("#dashboardCourses").innerHTML = `
+        <div class="empty-state compact" style="grid-column: 1 / -1; margin-top: 0">
+          <div class="empty-art">🔍</div>
+          <h3>No matching courses</h3>
+          <p>No courses match your search or filter settings.</p>
+          <button type="button" class="secondary-button" id="dashClearFilterBtn">Clear filters</button>
+        </div>
+      `;
+      return;
+    }
+
+    $("#dashboardCourses").innerHTML = filteredCourses.map(c => {
+      const s = stats(c), last = lessons(c).find(l => l.id === c.lastWatched) || lessons(c)[0];
+      return `
+        <article class="course-card" data-open-course="${c.id}" tabindex="0" role="button">
+          <div class="course-cover">
+            <span class="course-category-badge" style="position:absolute;top:12px;left:12px;z-index:2">${esc(c.category || "General")}</span>
+            <span class="cover-tag">LEARNING PATH</span>
+          </div>
+          <div class="course-body">
+            <h3>${esc(c.name)}</h3>
+            <p>${esc(c.description || "Your personal learning path")}</p>
+            <div class="course-meta">
+              <span>${s.done}/${s.total} lessons</span>
+              <span>${s.pct}%</span>
+            </div>
+            <div class="progress-track"><span style="width:${s.pct}%"></span></div>
+            ${last ? `<small class="muted" style="display:block;margin-top:11px;font-size:10px">Continue: ${esc(last.title)}</small>` : ""}
+          </div>
+        </article>
+      `;
     }).join("");
   }
 
   function renderManagement(){
+    state.courses.forEach(c => {
+      if (!c.category) c.category = "General";
+      if (!c.createdAt) c.createdAt = Date.now();
+    });
+
     const courseOptions = '<option value="">Choose a course</option>' + state.courses.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join("");
     const lc = $("#lessonCourse"); if (lc) lc.innerHTML = courseOptions;
     const pc = $("#playlistCourse"); if (pc) pc.innerHTML = courseOptions;
@@ -647,11 +780,114 @@
     updatePicCourseOptions();
     updateDocCourseOptions();
 
-    $("#courseCountLabel").textContent = `${state.courses.length} course${state.courses.length === 1 ? "" : "s"}`;
-    $("#managementEmpty").hidden = state.courses.length > 0;
+    const totalCourses = state.courses.length;
+    $("#courseCountLabel").textContent = `${totalCourses} course${totalCourses === 1 ? "" : "s"}`;
+    $("#managementEmpty").hidden = totalCourses > 0;
 
-    $("#managementCourses").innerHTML = state.courses.map(c => {
+    const mgmtBar = $("#mgmtControlsBar");
+    if (mgmtBar) mgmtBar.hidden = totalCourses === 0;
+
+    if (totalCourses === 0) {
+      $("#managementCourses").innerHTML = "";
+      return;
+    }
+
+    // Populate Category filter dropdown
+    const allCats = Array.from(new Set([
+      "Programming", "Computer Science", "Design", "Academics", "Languages", "Business", "Personal", "General", "Other",
+      ...state.courses.map(c => c.category || "General")
+    ])).sort();
+    const catSel = $("#mgmtCategoryFilter");
+    if (catSel) {
+      const curCat = mgmtFilterState.category;
+      catSel.innerHTML = '<option value="">All categories</option>' + allCats.map(cat => `<option value="${cat}" ${curCat === cat ? "selected" : ""}>${esc(cat)}</option>`).join("");
+    }
+
+    // Calculate overview statistics
+    let activeCount = 0;
+    let completedCount = 0;
+    state.courses.forEach(c => {
       const s = stats(c);
+      if (s.pct === 100 && s.total > 0) completedCount++;
+      else if (s.done > 0 && s.done < s.total) activeCount++;
+    });
+
+    const pTotal = $("#mgmtPillTotal"); if (pTotal) pTotal.textContent = `${totalCourses} Course${totalCourses === 1 ? "" : "s"}`;
+    const pActive = $("#mgmtPillActive"); if (pActive) pActive.textContent = `${activeCount} In Progress`;
+    const pComp = $("#mgmtPillCompleted"); if (pComp) pComp.textContent = `${completedCount} Completed`;
+
+    // Filter courses
+    let filtered = state.courses.filter(c => {
+      const s = stats(c);
+      if (mgmtFilterState.category && (c.category || "General") !== mgmtFilterState.category) return false;
+      if (mgmtFilterState.status === "in_progress" && !(s.done > 0 && s.done < s.total)) return false;
+      if (mgmtFilterState.status === "completed" && !(s.pct === 100 && s.total > 0)) return false;
+      if (mgmtFilterState.status === "not_started" && !(s.done === 0)) return false;
+      if (mgmtFilterState.search) {
+        const q = mgmtFilterState.search.toLowerCase();
+        const inName = (c.name || "").toLowerCase().includes(q);
+        const inCat = (c.category || "").toLowerCase().includes(q);
+        const inDesc = (c.description || "").toLowerCase().includes(q);
+        const inMods = (c.modules || []).some(m => {
+          if ((m.name || "").toLowerCase().includes(q)) return true;
+          return (m.lessons || []).some(l => {
+            if ((l.title || "").toLowerCase().includes(q)) return true;
+            if ((l.videoId || "").toLowerCase().includes(q)) return true;
+            return (l.videos || []).some(v => (v.title || "").toLowerCase().includes(q) || (v.videoId || "").toLowerCase().includes(q));
+          });
+        });
+        if (!inName && !inCat && !inDesc && !inMods) return false;
+      }
+      return true;
+    });
+
+    // Sort filtered courses
+    filtered.sort((a, b) => {
+      const sa = stats(a), sb = stats(b);
+      switch (mgmtFilterState.sort) {
+        case "az": return (a.name || "").localeCompare(b.name || "");
+        case "za": return (b.name || "").localeCompare(a.name || "");
+        case "progress_desc": return sb.pct - sa.pct;
+        case "progress_asc": return sa.pct - sb.pct;
+        case "lessons_desc": return sb.total - sa.total;
+        case "oldest": return (new Date(a.createdAt || 0).getTime()) - (new Date(b.createdAt || 0).getTime());
+        case "newest":
+        default:
+          return (new Date(b.createdAt || 0).getTime()) - (new Date(a.createdAt || 0).getTime());
+      }
+    });
+
+    // Filter status labels & reset button
+    const isFiltered = !!(mgmtFilterState.search || mgmtFilterState.category || mgmtFilterState.status || mgmtFilterState.sort !== "newest");
+    const resetBtn = $("#mgmtResetFilterBtn");
+    if (resetBtn) resetBtn.hidden = !isFiltered;
+
+    const statusLabel = $("#mgmtFilterStatusLabel");
+    if (statusLabel) {
+      statusLabel.textContent = isFiltered
+        ? `Showing ${filtered.length} of ${totalCourses} courses`
+        : `Showing all ${totalCourses} courses`;
+    }
+
+    if (filtered.length === 0) {
+      $("#managementCourses").innerHTML = `
+        <div class="empty-state compact" style="margin-top: 10px">
+          <div class="empty-art">🔍</div>
+          <h3>No matching courses found</h3>
+          <p>Try adjusting your search query, category, or status filter.</p>
+          <button type="button" class="secondary-button" id="mgmtClearFilterBtn">Reset all filters</button>
+        </div>
+      `;
+      return;
+    }
+
+    // Render collapsible course cards
+    $("#managementCourses").innerHTML = filtered.map(c => {
+      const s = stats(c);
+      const isSearching = !!mgmtFilterState.search;
+      // Auto expand during search so matches are visible; otherwise check collapsed set
+      const isCollapsed = isSearching ? false : collapsedCourseIds.has(c.id);
+
       const mods = (c.modules || []).map(m => `
         <div class="module-block">
           <div class="module-title">${esc(m.name)}</div>
@@ -709,19 +945,39 @@
       `).join("");
 
       return `
-        <article class="panel management-course">
+        <article class="panel management-course ${isCollapsed ? "collapsed" : ""}" data-course-id="${c.id}">
           <div class="management-course-head">
-            <div>
-              <h3>${esc(c.name)}</h3>
-              <p>${s.total} lessons · ${s.pct}% complete</p>
+            <div class="mc-head-main">
+              <span class="mc-chevron" data-toggle-course-collapse="${c.id}" role="button" tabindex="0" title="${isCollapsed ? "Expand course" : "Collapse course"}">
+                ${isCollapsed ? "▶" : "▼"}
+              </span>
+              <div class="mc-title-wrap">
+                <div class="mc-title-row">
+                  <h3 class="mc-title">${esc(c.name)}</h3>
+                  <span class="course-category-badge">${esc(c.category || "General")}</span>
+                </div>
+                <div class="mc-meta-row">
+                  <span>${s.total} lesson${s.total === 1 ? "" : "s"} (${s.done} completed)</span>
+                  <span>·</span>
+                  <span>${(c.modules || []).length} module${(c.modules || []).length === 1 ? "" : "s"}</span>
+                  <span>·</span>
+                  <div class="mc-progress-inline">
+                    <div class="progress-track"><span style="width:${s.pct}%"></span></div>
+                    <span class="mc-progress-pct">${s.pct}%</span>
+                  </div>
+                </div>
+              </div>
             </div>
             <div class="course-actions">
               <button type="button" class="mini-button" data-open-course="${c.id}">Study course →</button>
-              <button type="button" class="mini-button edit" data-edit-course="${c.id}">Edit</button>
-              <button type="button" class="mini-button delete" data-delete-course="${c.id}">Delete</button>
+              <button type="button" class="mini-button edit" data-edit-course-modal="${c.id}">✎ Edit</button>
+              <button type="button" class="mini-button delete" data-delete-course="${c.id}">🗑 Delete</button>
             </div>
           </div>
-          ${mods || '<p class="muted small" style="margin:15px 0 0">No lessons or playlists yet. Add one above.</p>'}
+          <div class="management-course-body">
+            ${c.description ? `<p class="muted small" style="margin:12px 0 6px;line-height:1.5">${esc(c.description)}</p>` : ""}
+            ${mods || '<p class="muted small" style="margin:15px 0 0">No lessons or playlists yet. Add one above.</p>'}
+          </div>
         </article>
       `;
     }).join("");
@@ -1945,11 +2201,62 @@
     renderManagement();
   });
 
+  // Edit Course Modal Functions
+  function openEditCourseModal(courseId) {
+    const c = state.courses.find(x => x.id === courseId);
+    if (!c) return;
+    $("#editCourseIdInput").value = c.id;
+    $("#editCourseNameInput").value = c.name;
+    if ($("#editCourseCategorySelect")) $("#editCourseCategorySelect").value = c.category || "General";
+    $("#editCourseDescInput").value = c.description || "";
+    $("#editCourseModalOverlay").hidden = false;
+    $("#editCourseNameInput").focus();
+  }
+
+  function closeEditCourseModal() {
+    $("#editCourseModalOverlay").hidden = true;
+    $("#editCourseForm")?.reset();
+  }
+
+  $("#editCourseModalClose")?.addEventListener("click", closeEditCourseModal);
+  $("#editCourseCancelBtn")?.addEventListener("click", closeEditCourseModal);
+  $("#editCourseModalOverlay")?.addEventListener("click", e => {
+    if (e.target === $("#editCourseModalOverlay")) closeEditCourseModal();
+  });
+
+  $("#editCourseForm")?.addEventListener("submit", e => {
+    e.preventDefault();
+    const cid = $("#editCourseIdInput").value;
+    const c = state.courses.find(x => x.id === cid);
+    if (!c) return;
+    const cleanName = $("#editCourseNameInput").value.trim();
+    if (!cleanName) { notify("Course name cannot be empty."); return; }
+    c.name = cleanName;
+    c.category = $("#editCourseCategorySelect")?.value || "General";
+    c.description = $("#editCourseDescInput").value.trim();
+    closeEditCourseModal();
+    save();
+    notify("Course updated.");
+  });
+
   // Course Form
-  $("#courseForm")?.addEventListener("submit",e=>{
-    e.preventDefault();const name=$("#courseName").value.trim();if(!name)return;
-    state.courses.push({id:uid(),name,description:$("#courseDescription").value.trim(),createdAt:new Date().toISOString(),modules:[],lastWatched:null});
-    $("#courseForm").reset();save();notify("Course created.");
+  $("#courseForm")?.addEventListener("submit", e => {
+    e.preventDefault();
+    const name = $("#courseName").value.trim();
+    if (!name) return;
+    const category = $("#courseCategory") ? $("#courseCategory").value : "General";
+    state.courses.push({
+      id: uid(),
+      name,
+      category: category || "General",
+      description: $("#courseDescription").value.trim(),
+      createdAt: new Date().toISOString(),
+      modules: [],
+      lastWatched: null
+    });
+    $("#courseForm").reset();
+    save();
+    notify("Course created.");
   });
 
   // Single Video Form
@@ -2759,20 +3066,42 @@
       return;
     }
 
-    // Course Edit
-    const editCourse = e.target.closest("[data-edit-course]");
+    // Course Accordion Collapse / Expand Toggle
+    const toggleCourse = e.target.closest("[data-toggle-course-collapse]");
+    if (toggleCourse) {
+      e.stopPropagation();
+      const cid = toggleCourse.dataset.toggleCourseCollapse;
+      if (collapsedCourseIds.has(cid)) {
+        collapsedCourseIds.delete(cid);
+      } else {
+        collapsedCourseIds.add(cid);
+      }
+      renderManagement();
+      return;
+    }
+
+    // Clicking Course Header (excluding action buttons) also toggles accordion
+    const mcHead = e.target.closest(".management-course-head");
+    if (mcHead && !e.target.closest("button") && !e.target.closest("a") && !e.target.closest("input") && !e.target.closest("select")) {
+      const parentCard = mcHead.closest(".management-course");
+      const cid = parentCard?.dataset.courseId;
+      if (cid) {
+        if (collapsedCourseIds.has(cid)) {
+          collapsedCourseIds.delete(cid);
+        } else {
+          collapsedCourseIds.add(cid);
+        }
+        renderManagement();
+        return;
+      }
+    }
+
+    // Edit Course Modal Trigger
+    const editCourse = e.target.closest("[data-edit-course-modal]") || e.target.closest("[data-edit-course]");
     if (editCourse) {
-      const c = state.courses.find(x => x.id === editCourse.dataset.editCourse);
-      if (!c) return;
-      const name = prompt("Course name:", c.name);
-      if (name === null) return;
-      const cleanName = name.trim();
-      if (!cleanName) { notify("Course name cannot be empty."); return; }
-      const description = prompt("Course description:", c.description || "");
-      if (description === null) return;
-      c.name = cleanName; c.description = description.trim();
-      save();
-      notify("Course updated.");
+      e.stopPropagation();
+      const cid = editCourse.dataset.editCourseModal || editCourse.dataset.editCourse;
+      openEditCourseModal(cid);
       return;
     }
 
@@ -2794,7 +3123,14 @@
       return;
     }
 
-    // Theme selection in Settings
+    // Theme Mode Selection in Settings (Dark vs White)
+    const mcChoice = e.target.closest("[data-mode-choice]");
+    if (mcChoice) {
+      applyThemeMode(mcChoice.dataset.modeChoice, true);
+      return;
+    }
+
+    // Theme Palette selection in Settings
     const tc = e.target.closest("[data-theme-id]");
     if (tc) {
       applyTheme(tc.dataset.themeId, true);
@@ -2804,15 +3140,118 @@
     // Delete Course
     const del = e.target.closest("[data-delete-course]");
     if (del && confirm("Delete this course and all its lessons and playlists?")) {
-      state.courses = state.courses.filter(c => c.id !== del.dataset.deleteCourse);
+      const cid = del.dataset.deleteCourse;
+      state.courses = state.courses.filter(c => c.id !== cid);
+      collapsedCourseIds.delete(cid);
       save();
       notify("Course deleted.");
     }
   });
 
+  // Topbar Theme Mode Toggle Button
+  $("#themeModeToggle")?.addEventListener("click", () => {
+    applyThemeMode(currentThemeMode === "light" ? "dark" : "light", true);
+  });
+
+  // Multi-Course Management Toolbar Listeners
+  $("#mgmtCourseSearch")?.addEventListener("input", e => {
+    mgmtFilterState.search = e.target.value.trim();
+    const clearBtn = $("#mgmtSearchClear");
+    if (clearBtn) clearBtn.hidden = !mgmtFilterState.search;
+    renderManagement();
+  });
+
+  $("#mgmtSearchClear")?.addEventListener("click", () => {
+    const input = $("#mgmtCourseSearch");
+    if (input) input.value = "";
+    mgmtFilterState.search = "";
+    $("#mgmtSearchClear").hidden = true;
+    renderManagement();
+  });
+
+  $("#mgmtCategoryFilter")?.addEventListener("change", e => {
+    mgmtFilterState.category = e.target.value;
+    renderManagement();
+  });
+
+  $("#mgmtStatusFilter")?.addEventListener("change", e => {
+    mgmtFilterState.status = e.target.value;
+    renderManagement();
+  });
+
+  $("#mgmtSortSelect")?.addEventListener("change", e => {
+    mgmtFilterState.sort = e.target.value;
+    renderManagement();
+  });
+
+  $("#mgmtExpandAllBtn")?.addEventListener("click", () => {
+    collapsedCourseIds.clear();
+    renderManagement();
+    notify("All courses expanded.");
+  });
+
+  $("#mgmtCollapseAllBtn")?.addEventListener("click", () => {
+    state.courses.forEach(c => collapsedCourseIds.add(c.id));
+    renderManagement();
+    notify("All courses collapsed.");
+  });
+
+  function resetMgmtFilters() {
+    mgmtFilterState = { search: "", category: "", status: "", sort: "newest" };
+    const sInput = $("#mgmtCourseSearch"); if (sInput) sInput.value = "";
+    const sClear = $("#mgmtSearchClear"); if (sClear) sClear.hidden = true;
+    const catF = $("#mgmtCategoryFilter"); if (catF) catF.value = "";
+    const statF = $("#mgmtStatusFilter"); if (statF) statF.value = "";
+    const sortS = $("#mgmtSortSelect"); if (sortS) sortS.value = "newest";
+    renderManagement();
+  }
+
+  $("#mgmtResetFilterBtn")?.addEventListener("click", resetMgmtFilters);
+
+  document.addEventListener("click", e => {
+    if (e.target.id === "mgmtClearFilterBtn") {
+      resetMgmtFilters();
+    }
+    if (e.target.id === "dashClearFilterBtn") {
+      dashFilterState = { search: "", category: "", status: "" };
+      const dSearch = $("#dashCourseSearch"); if (dSearch) dSearch.value = "";
+      const dClear = $("#dashSearchClear"); if (dClear) dClear.hidden = true;
+      const dCat = $("#dashCategoryFilter"); if (dCat) dCat.value = "";
+      const dStat = $("#dashStatusFilter"); if (dStat) dStat.value = "";
+      renderDashboard();
+    }
+  });
+
+  // Dashboard Course Filter Listeners
+  $("#dashCourseSearch")?.addEventListener("input", e => {
+    dashFilterState.search = e.target.value.trim();
+    const dClear = $("#dashSearchClear");
+    if (dClear) dClear.hidden = !dashFilterState.search;
+    renderDashboard();
+  });
+
+  $("#dashSearchClear")?.addEventListener("click", () => {
+    const dSearch = $("#dashCourseSearch");
+    if (dSearch) dSearch.value = "";
+    dashFilterState.search = "";
+    $("#dashSearchClear").hidden = true;
+    renderDashboard();
+  });
+
+  $("#dashCategoryFilter")?.addEventListener("change", e => {
+    dashFilterState.category = e.target.value;
+    renderDashboard();
+  });
+
+  $("#dashStatusFilter")?.addEventListener("change", e => {
+    dashFilterState.status = e.target.value;
+    renderDashboard();
+  });
+
   // Keyboard navigation & accessibility
   document.addEventListener("keydown", e => {
     if (e.key === "Escape") {
+      if (!$("#editCourseModalOverlay")?.hidden) { closeEditCourseModal(); return; }
       if (!$("#playlistVideoModalOverlay")?.hidden) { closePlaylistVideoModal(); return; }
       if (!$("#playlistPasteModalOverlay")?.hidden) { closePlaylistPasteModal(); return; }
       if (!$("#editContentModalOverlay")?.hidden) { closeEditContentModal(); return; }
@@ -2823,7 +3262,7 @@
       if (!$("#picLightboxOverlay")?.hidden) { closeLightbox(); return; }
       if (!$("#picModalOverlay")?.hidden) { closePicModal(); return; }
     }
-    if ((e.key === "Enter" || e.key === " ") && e.target.matches("[data-lesson],[data-open-course],[data-view-pic],[data-view-note],[data-view-pdf],[data-theme-id]")) {
+    if ((e.key === "Enter" || e.key === " ") && e.target.matches("[data-lesson],[data-open-course],[data-view-pic],[data-view-note],[data-view-pdf],[data-theme-id],[data-mode-choice],[data-toggle-course-collapse]")) {
       e.preventDefault();
       e.target.click();
     }
@@ -2859,7 +3298,8 @@
     const docs = await DocDB.getAll();
     const payload = {
       app: "FocusLearn",
-      version: 4,
+      version: 5,
+      themeMode: currentThemeMode,
       theme: currentTheme,
       exportedAt: new Date().toISOString(),
       ...state,
@@ -2881,6 +3321,10 @@
       if (!Array.isArray(cs) || !cs.every(c => c && typeof c.name === "string" && Array.isArray(c.modules) && c.modules.every(m => typeof m.name === "string" && Array.isArray(m.lessons) && m.lessons.every(l => typeof l.title === "string" && ((typeof l.videoId === "string" && /^[A-Za-z0-9_-]{11}$/.test(l.videoId)) || (typeof l.playlistId === "string" && /^[A-Za-z0-9_-]{8,64}$/.test(l.playlistId)) || l.videoId === "videoseries"))))) throw Error();
       if (!confirm("Import replaces your current library, pictures, notes, and PDFs. Continue?")) return;
       state = { courses: cs, sessions: Array.isArray(p.sessions) ? p.sessions : [] };
+
+      if (p.themeMode && (p.themeMode === "light" || p.themeMode === "dark")) {
+        applyThemeMode(p.themeMode, false);
+      }
 
       if (p.theme && THEMES.some(x => x.id === p.theme)) {
         applyTheme(p.theme, false);
@@ -2925,8 +3369,10 @@
     }
   });
 
-  // Initialize DB and load pictures and documents
+  // Initialize Theme Mode, Theme Color, and load DB
+  applyThemeMode(currentThemeMode, false);
   applyTheme(currentTheme, false);
+
   Promise.all([PicDB.getAll(), DocDB.getAll()]).then(([pics, docs]) => {
     picturesList = Array.isArray(pics) ? pics : [];
     docsList = Array.isArray(docs) ? docs : [];
