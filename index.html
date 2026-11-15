@@ -68,6 +68,13 @@
 
         <!-- Right: Actions & Tools -->
         <div class="nav-actions">
+          <!-- Smart Adder Trigger Button -->
+          <button type="button" class="smart-add-nav-btn" id="navSmartAddBtn" title="Smart Adder — Auto-detect paste, URLs & files (Ctrl+K)">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+            <span class="smart-add-text">Smart Add</span>
+            <span class="smart-add-badge">⌘K</span>
+          </button>
+
           <!-- Insta-Style Quick Create Button -->
           <div class="quick-create-wrap" id="quickCreateWrap">
             <button type="button" class="quick-create-btn" id="quickCreateBtn" title="Create or add content" aria-expanded="false">
@@ -75,6 +82,20 @@
               <span class="quick-create-text">Create</span>
             </button>
             <div class="quick-create-menu" id="quickCreateMenu" hidden>
+              <div class="qc-header" style="padding:6px 10px;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px">Quick Add</div>
+              <button type="button" class="qc-item" data-qc-action="smart-add">
+                <span class="qc-icon">✨</span>
+                <div><strong>Smart Adder</strong><small>Auto-detect paste, URLs &amp; files</small></div>
+              </button>
+              <button type="button" class="qc-item" data-qc-action="screenshot">
+                <span class="qc-icon">📸</span>
+                <div><strong>Capture Screenshot</strong><small>Snap screen, categorize &amp; tag</small></div>
+              </button>
+              <button type="button" class="qc-item" data-qc-action="receive-course">
+                <span class="qc-icon">📥</span>
+                <div><strong>Receive Course</strong><small>Import shared course JSON</small></div>
+              </button>
+              <div class="qc-divider" style="height:1px;background:var(--line);margin:4px 0"></div>
               <button type="button" class="qc-item" data-qc-action="course">
                 <span class="qc-icon">📚</span>
                 <div><strong>New Course</strong><small>Add structured course</small></div>
@@ -220,7 +241,13 @@
       </section>
 
       <section class="page" id="page-courses">
-        <div class="page-heading"><div><p class="eyebrow">BUILD YOUR LIBRARY</p><h1>Course management</h1><p class="muted">Organize videos into courses, modules, and lessons.</p></div></div>
+        <div class="page-heading">
+          <div><p class="eyebrow">BUILD YOUR LIBRARY</p><h1>Course management</h1><p class="muted">Organize videos into courses, modules, and lessons.</p></div>
+          <div class="header-actions">
+            <button type="button" class="secondary-button" id="mgmtReceiveCourseBtn" title="Import course from JSON">📥 Receive Course (JSON)</button>
+            <button type="button" class="primary-button" id="mgmtSmartAddBtn" title="Smart Adder intake">✨ Smart Add</button>
+          </div>
+        </div>
         <div class="management-layout">
           <div class="panel create-panel">
             <div class="panel-title"><div><span class="step">01</span><h3>Create a course</h3></div></div>
@@ -350,7 +377,7 @@
         <div class="player-layout">
           <div class="player-main">
             <div class="video-frame" id="videoFrame"><div class="player-placeholder">Select a lesson to begin</div></div>
-            <div class="lesson-heading"><div><p class="eyebrow" id="playerModuleLabel">NOW LEARNING</p><h1 id="playerLessonTitle">Choose a lesson</h1><p class="muted" id="playerLessonMeta">Your progress is saved automatically on this device.</p></div><div class="player-actions"><div class="study-timer"><span class="timer-dot" id="timerDot"></span><strong id="studyTimerDisplay">00:00:00</strong><button class="timer-button" id="studyTimerToggle" type="button">Start study</button></div><button class="mini-button" id="playerCoursePicsBtn" type="button" title="View or add pictures for this course" style="padding:10px 12px;font-weight:700">🖼 Pictures</button><button class="mini-button" id="playerCourseNotesBtn" type="button" title="View or create notes & PDFs for this course" style="padding:10px 12px;font-weight:700">✎ Notes &amp; PDFs</button><button class="complete-button" id="completeButton">✓ Mark complete</button></div></div>
+            <div class="lesson-heading"><div><p class="eyebrow" id="playerModuleLabel">NOW LEARNING</p><h1 id="playerLessonTitle">Choose a lesson</h1><p class="muted" id="playerLessonMeta">Your progress is saved automatically on this device.</p></div><div class="player-actions"><div class="study-timer"><span class="timer-dot" id="timerDot"></span><strong id="studyTimerDisplay">00:00:00</strong><button class="timer-button" id="studyTimerToggle" type="button">Start study</button></div><button class="mini-button" id="playerScreenshotBtn" type="button" title="Capture active study screenshot with timestamp and course tag" style="padding:10px 12px;font-weight:700">📸 Screenshot</button><button class="mini-button" id="playerCoursePicsBtn" type="button" title="View or add pictures for this course" style="padding:10px 12px;font-weight:700">🖼 Pictures</button><button class="mini-button" id="playerCourseNotesBtn" type="button" title="View or create notes & PDFs for this course" style="padding:10px 12px;font-weight:700">✎ Notes &amp; PDFs</button><button class="complete-button" id="completeButton">✓ Mark complete</button></div></div>
             <div class="panel lesson-note"><h3>Stay focused</h3><p>Keep this space for the lesson. When you're finished, mark it complete and move to the next one.</p></div>
           </div>
           <aside class="panel curriculum" id="playerSidebar">
@@ -403,24 +430,86 @@
             <h1>Pictures &amp; Visual Notes</h1>
             <p class="muted">Store, view, and organize study diagrams, whiteboard photos, formulas, and cheatsheets.</p>
           </div>
-          <button class="primary-button" id="openAddPicBtn" type="button">＋ Add picture</button>
+          <div class="header-actions">
+            <button class="secondary-button" id="openCaptureScreenshotBtn" type="button" title="Capture active screen or window">📸 Capture Screenshot</button>
+            <button class="primary-button" id="openAddPicBtn" type="button">＋ Add picture</button>
+          </div>
+        </div>
+
+        <div class="pic-pill-strip" id="picPillStrip" style="display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px">
+          <button type="button" class="pic-cat-pill active" data-pic-cat="">All</button>
+          <button type="button" class="pic-cat-pill" data-pic-cat="Screenshot">📸 Screenshots</button>
+          <button type="button" class="pic-cat-pill" data-pic-cat="Code Screenshot">💻 Code</button>
+          <button type="button" class="pic-cat-pill" data-pic-cat="Lecture Slide">📝 Slides</button>
+          <button type="button" class="pic-cat-pill" data-pic-cat="Diagram">📊 Diagrams</button>
+          <button type="button" class="pic-cat-pill" data-pic-cat="Formula">📐 Formulas</button>
+          <button type="button" class="pic-cat-pill" data-pic-cat="Whiteboard">📋 Whiteboard</button>
+        </div>
+
+        <!-- Course Screenshot Folders & Instant Direct Save Workspace -->
+        <div class="course-folders-panel" id="courseFoldersPanel">
+          <div class="course-folders-top">
+            <div class="course-folders-heading">
+              <span class="folder-header-icon">📂</span>
+              <div>
+                <h3 class="folder-title" id="courseFolderTitle">Course Screenshot Folders</h3>
+                <p class="muted small" id="courseFolderSubtitle">Open a folder inside any course, then paste or drag &amp; drop images directly without prompt forms.</p>
+              </div>
+            </div>
+            <div class="course-folders-controls">
+              <label for="courseFolderSelect" class="sr-only">Select Course</label>
+              <select id="courseFolderSelect" class="course-folder-dropdown" title="Select course to view its screenshot folders">
+                <option value="">All courses</option>
+              </select>
+              <button type="button" class="mini-btn-action folder-action-btn" id="createCourseFolderBtn" title="Create a new folder in this course">＋ New Folder</button>
+            </div>
+          </div>
+
+          <!-- Folder Tabs / Pills Strip -->
+          <div class="folder-pills-scroll" id="folderPillsScroll">
+            <div class="folder-pills-list" id="folderPillsList">
+              <button type="button" class="folder-pill active" data-folder="">📁 All Folders</button>
+              <button type="button" class="folder-pill" data-folder="General">📁 General</button>
+            </div>
+          </div>
+
+          <!-- Direct Instant Save Dropzone (Zero-Prompt Zone) -->
+          <div class="folder-direct-dropzone" id="folderDirectDropzone" tabindex="0" role="region" aria-label="Direct screenshot drop and paste zone">
+            <input type="file" id="folderDirectFileInput" accept="image/*" multiple hidden>
+            <div class="folder-dropzone-inner">
+              <div class="folder-dropzone-icon">📥</div>
+              <div class="folder-dropzone-details">
+                <h4 id="folderDropTargetTitle">Paste (<kbd>Ctrl+V</kbd>) or Drop Screenshots directly into <span class="folder-target-badge" id="folderDropTargetName">General</span></h4>
+                <p class="muted small">Direct save with zero prompts or forms. User can add or edit title, tags, category &amp; notes anytime in edit option.</p>
+              </div>
+              <div class="folder-dropzone-actions">
+                <button type="button" class="primary-button mini" id="folderDirectSnapBtn" title="Snap active screen and save directly to this folder with zero prompts">📸 Snap Screen Direct</button>
+                <label for="folderDirectFileInput" class="secondary-button mini" style="cursor:pointer;margin:0" title="Select one or multiple images to save directly">📁 Drop / Pick Images</label>
+                <button type="button" class="mini-btn-action" id="folderDirectPasteBtn" title="Paste image from clipboard directly">📋 Paste Direct</button>
+                <button type="button" class="mini-btn-action" id="folderRenameBtn" title="Rename current folder" hidden>✎ Rename</button>
+                <button type="button" class="mini-btn-action danger" id="folderDeleteBtn" title="Delete current folder" hidden>🗑 Delete</button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="pic-toolbar">
           <div class="pic-search-box">
             <span class="search-icon">🔍</span>
-            <input type="text" id="picSearchInput" placeholder="Search pictures by title or notes..." autocomplete="off">
+            <input type="text" id="picSearchInput" placeholder="Search pictures by title, tags or notes..." autocomplete="off">
             <button type="button" class="clear-search-btn" id="picClearSearch" hidden title="Clear search">✕</button>
           </div>
           <div class="pic-filters">
             <select id="picCategoryFilter" aria-label="Filter by category">
               <option value="">All categories</option>
+              <option value="Screenshot">Screenshot</option>
+              <option value="Code Screenshot">Code Screenshot</option>
+              <option value="Lecture Slide">Lecture Slide</option>
               <option value="Diagram">Diagram</option>
               <option value="Formula">Formula</option>
-              <option value="Cheatsheet">Cheatsheet</option>
-              <option value="Lecture Note">Lecture Note</option>
-              <option value="Screenshot">Screenshot</option>
+              <option value="Whiteboard">Whiteboard</option>
               <option value="Mindmap">Mindmap</option>
+              <option value="Cheatsheet">Cheatsheet</option>
               <option value="Other">Other</option>
             </select>
             <select id="picCourseFilter" aria-label="Filter by course">
@@ -669,6 +758,7 @@
               <span class="dropzone-icon">🖼</span>
               <strong>Click to browse or drag &amp; drop an image</strong>
               <small>PNG, JPG, WebP, GIF, SVG · Or press Ctrl+V to paste</small>
+              <button type="button" class="mini-btn-action" id="modalCaptureScreenBtn" style="margin-top:8px">📸 Capture Screen Snapshot</button>
             </div>
             <div class="dropzone-preview" id="picDropPreview" hidden>
               <img id="picPreviewImg" src="" alt="Selected picture preview">
@@ -691,15 +781,22 @@
           <div>
             <label for="picCategoryInput">Category</label>
             <select id="picCategoryInput">
+              <option value="Screenshot">Screenshot</option>
+              <option value="Code Screenshot">Code Screenshot</option>
+              <option value="Lecture Slide">Lecture Slide</option>
               <option value="Diagram">Diagram</option>
               <option value="Formula">Formula</option>
-              <option value="Cheatsheet">Cheatsheet</option>
-              <option value="Lecture Note">Lecture Note</option>
-              <option value="Screenshot">Screenshot</option>
+              <option value="Whiteboard">Whiteboard</option>
               <option value="Mindmap">Mindmap</option>
+              <option value="Cheatsheet">Cheatsheet</option>
               <option value="Other">Other</option>
             </select>
           </div>
+        </div>
+
+        <div>
+          <label for="picTagsInput">Tags <span class="optional">Optional — comma-separated</span></label>
+          <input type="text" id="picTagsInput" placeholder="e.g. react, hooks, interview, exam" maxlength="150">
         </div>
 
         <div>
@@ -707,6 +804,14 @@
           <select id="picCourseSelect">
             <option value="">None (General)</option>
           </select>
+        </div>
+
+        <div id="picFolderFieldWrap">
+          <label for="picFolderInput">Folder <span class="optional">Inside course</span></label>
+          <div style="display:flex;gap:6px">
+            <input type="text" id="picFolderInput" list="picFolderDatalist" placeholder="e.g. General, Lecture Slides, DSA Diagrams" maxlength="80">
+            <datalist id="picFolderDatalist"></datalist>
+          </div>
         </div>
 
         <div>
@@ -717,6 +822,31 @@
         <div class="pic-modal-actions">
           <button type="button" class="secondary-button" id="picCancelBtn">Cancel</button>
           <button type="submit" class="primary-button" id="picSubmitBtn">Save picture <span>→</span></button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Course Screenshot Folder Modal -->
+  <div class="pic-modal-overlay" id="courseFolderModalOverlay" hidden>
+    <div class="pic-modal" style="max-width:440px" role="dialog" aria-modal="true" aria-labelledby="courseFolderModalTitle">
+      <div class="pic-modal-head">
+        <h3 id="courseFolderModalTitle">Create Screenshot Folder</h3>
+        <button type="button" class="modal-close-btn" id="courseFolderModalClose" aria-label="Close dialog">✕</button>
+      </div>
+      <form id="courseFolderForm" class="pic-modal-form">
+        <input type="hidden" id="courseFolderOldName">
+        <div>
+          <label for="courseFolderTargetSelect">Course <span class="required">*</span></label>
+          <select id="courseFolderTargetSelect" required></select>
+        </div>
+        <div>
+          <label for="courseFolderNameInput">Folder Name <span class="required">*</span></label>
+          <input type="text" id="courseFolderNameInput" maxlength="60" placeholder="e.g. Week 1 Slides, DSA Diagrams, Formative Notes" required>
+        </div>
+        <div class="pic-modal-actions">
+          <button type="button" class="secondary-button" id="courseFolderCancelBtn">Cancel</button>
+          <button type="submit" class="primary-button" id="courseFolderSubmitBtn">Save Folder <span>✓</span></button>
         </div>
       </form>
     </div>
@@ -1090,6 +1220,163 @@
           <button type="submit" class="primary-button" id="editCourseSaveBtn">Save changes <span>✓</span></button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Smart Adder Modal -->
+  <div class="pic-modal-overlay" id="smartAddModalOverlay" hidden>
+    <div class="pic-modal smart-add-modal" role="dialog" aria-modal="true" aria-labelledby="smartAddTitle">
+      <div class="pic-modal-head">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="smart-add-modal-icon">✨</span>
+          <div>
+            <h3 id="smartAddTitle" style="margin:0;font-size:16px">Smart Adder</h3>
+            <small class="muted" style="display:block;font-size:11px">Auto-detects YouTube videos, playlists, screenshots, notes, PDFs &amp; courses</small>
+          </div>
+        </div>
+        <button type="button" class="modal-close-btn" id="smartAddCloseBtn" aria-label="Close dialog">✕</button>
+      </div>
+      <div class="smart-add-body">
+        <div class="smart-add-input-wrapper">
+          <textarea id="smartAddInput" rows="3" placeholder="Paste anything here: YouTube URL, playlist link, image (Ctrl+V), note text, PDF file, or course JSON..."></textarea>
+          <div class="smart-add-quick-tools">
+            <button type="button" class="mini-btn-action" id="smartAddPasteBtn" title="Paste from clipboard">📋 Paste from clipboard</button>
+            <button type="button" class="mini-btn-action" id="smartAddCaptureBtn" title="Capture active screen or window">📸 Screen snapshot</button>
+            <label class="mini-btn-action" for="smartAddFileInput" style="cursor:pointer;margin:0" title="Upload image, PDF, or course JSON">📁 Choose file</label>
+            <input type="file" id="smartAddFileInput" accept="image/*,.pdf,application/pdf,.json,application/json" hidden>
+          </div>
+        </div>
+
+        <!-- Detection Status / Result Card -->
+        <div class="smart-detect-card" id="smartDetectCard">
+          <div class="smart-detect-empty" id="smartDetectEmpty">
+            <div class="smart-detect-art">💡</div>
+            <p><strong>Paste or drop anything above to begin.</strong></p>
+            <small class="muted">Try pasting a YouTube link, pressing Ctrl+V with a screenshot copied, typing note text, or dropping a file.</small>
+          </div>
+
+          <div class="smart-detect-content" id="smartDetectContent" hidden>
+            <div class="smart-detect-header">
+              <span class="smart-detect-badge" id="smartDetectBadge">Detected</span>
+              <span class="muted small" id="smartDetectTypeDesc">Ready to save</span>
+            </div>
+            <div class="smart-detect-preview" id="smartDetectPreview"></div>
+            <form id="smartDetectForm" class="smart-detect-form">
+              <div id="smartDetectFields"></div>
+              <div class="smart-detect-actions">
+                <button type="button" class="secondary-button" id="smartAddClearBtn">Clear</button>
+                <button type="submit" class="primary-button" id="smartAddSubmitBtn">Add to Library <span>＋</span></button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Share Course Modal -->
+  <div class="pic-modal-overlay" id="shareCourseModalOverlay" hidden>
+    <div class="pic-modal share-course-modal" role="dialog" aria-modal="true" aria-labelledby="shareCourseTitle">
+      <div class="pic-modal-head">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="share-modal-icon">↗</span>
+          <div>
+            <h3 id="shareCourseTitle" style="margin:0;font-size:16px">Share Course</h3>
+            <small class="muted" style="display:block;font-size:11px">Share this course with anyone via JSON file, text snippet, or share link</small>
+          </div>
+        </div>
+        <button type="button" class="modal-close-btn" id="shareCourseCloseBtn" aria-label="Close dialog">✕</button>
+      </div>
+      <div class="share-course-body">
+        <!-- Summary card -->
+        <div class="share-summary-card" id="shareSummaryCard">
+          <div class="share-summary-info">
+            <span class="course-category-badge" id="shareCourseCategory">Category</span>
+            <h4 id="shareCourseName" style="margin:8px 0 4px;font-size:16px;color:var(--text)">Course Title</h4>
+            <p id="shareCourseDesc" class="muted small" style="margin:0">Description</p>
+          </div>
+          <div class="share-summary-stats">
+            <div><strong id="shareModuleCount">0</strong><small>Modules</small></div>
+            <div><strong id="shareLessonCount">0</strong><small>Lessons &amp; Playlists</small></div>
+          </div>
+        </div>
+
+        <div class="share-json-section">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+            <label for="shareCourseJson" style="font-weight:700;font-size:12px;color:var(--text);margin:0">Course JSON Package</label>
+            <span class="muted small" id="shareJsonSize">0 KB</span>
+          </div>
+          <textarea id="shareCourseJson" rows="8" readonly spellcheck="false" style="font-family:monospace;font-size:11px;line-height:1.4"></textarea>
+        </div>
+
+        <div class="share-actions-grid">
+          <button type="button" class="primary-button" id="copyCourseJsonBtn" style="justify-content:center">
+            <span>📋</span> Copy JSON to Clipboard
+          </button>
+          <button type="button" class="secondary-button" id="downloadCourseJsonBtn" style="justify-content:center">
+            <span>💾</span> Download .json File
+          </button>
+          <button type="button" class="secondary-button" id="copyCourseShareUrlBtn" style="justify-content:center;grid-column:1/-1">
+            <span>🔗</span> Copy Shareable URL Link
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Receive Course Modal -->
+  <div class="pic-modal-overlay" id="receiveCourseModalOverlay" hidden>
+    <div class="pic-modal receive-course-modal" role="dialog" aria-modal="true" aria-labelledby="receiveCourseTitle">
+      <div class="pic-modal-head">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="receive-modal-icon">📥</span>
+          <div>
+            <h3 id="receiveCourseTitle" style="margin:0;font-size:16px">Receive / Import Course</h3>
+            <small class="muted" style="display:block;font-size:11px">Import a course shared via JSON text, .json file, or shared link</small>
+          </div>
+        </div>
+        <button type="button" class="modal-close-btn" id="receiveCourseCloseBtn" aria-label="Close dialog">✕</button>
+      </div>
+      <div class="receive-course-body">
+        <div class="receive-input-section">
+          <label for="receiveCourseInput" style="font-weight:700;font-size:12px;color:var(--text)">Paste Course JSON</label>
+          <textarea id="receiveCourseInput" rows="5" placeholder='Paste FocusLearn course JSON here (e.g. { "type": "FocusLearn_Course", ... } or raw course object)...' spellcheck="false" style="font-family:monospace;font-size:11px"></textarea>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;gap:8px">
+            <label class="secondary-button" for="receiveFileInput" style="cursor:pointer;margin:0;font-size:12px;padding:7px 13px">
+              📁 Choose .json File
+            </label>
+            <input type="file" id="receiveFileInput" accept=".json,application/json" hidden>
+            <button type="button" class="text-button" id="receiveClearBtn">Clear</button>
+          </div>
+        </div>
+
+        <div class="receive-preview-card" id="receivePreviewCard" hidden>
+          <div class="receive-preview-head" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+            <span class="receive-status-badge valid" id="receiveStatusBadge">✓ Valid FocusLearn Course</span>
+            <span class="course-category-badge" id="receivePreviewCategory">Category</span>
+          </div>
+          <h4 id="receivePreviewName" style="margin:8px 0 4px;font-size:16px;color:var(--text)">Course Name</h4>
+          <p id="receivePreviewDesc" class="muted small" style="margin:0 0 10px">Course Description</p>
+          <div class="receive-modules-summary" id="receiveModulesSummary"></div>
+          
+          <div class="receive-options" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line)">
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;color:var(--text)">
+              <input type="checkbox" id="receiveRegenerateIds" checked>
+              <span>Import as new course (generates fresh IDs to keep your existing progress safe)</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="receive-error-box" id="receiveErrorBox" hidden>
+          <span style="font-size:18px">⚠️</span>
+          <div id="receiveErrorMessage" style="font-size:12px;line-height:1.4"></div>
+        </div>
+
+        <div class="pic-modal-actions" style="margin-top:16px">
+          <button type="button" class="secondary-button" id="receiveCancelBtn">Cancel</button>
+          <button type="button" class="primary-button" id="receiveConfirmBtn" disabled>Import Course <span>＋</span></button>
+        </div>
+      </div>
     </div>
   </div>
 

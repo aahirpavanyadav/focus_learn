@@ -20,6 +20,7 @@
     search: "",
     category: "",
     courseId: "",
+    folder: "",
     sort: "newest"
   };
 
@@ -992,6 +993,8 @@
             </div>
             <div class="course-actions">
               <button type="button" class="mini-button" data-open-course="${c.id}">Study course →</button>
+              <button type="button" class="mini-button" data-course-folders="${c.id}" title="Open screenshot folders for this course">📂 Screenshots (${picturesList.filter(p => p.courseId === c.id).length})</button>
+              <button type="button" class="mini-button" data-share-course="${c.id}" title="Share course via JSON">↗ Share</button>
               <button type="button" class="mini-button edit" data-edit-course-modal="${c.id}">✎ Edit</button>
               <button type="button" class="mini-button delete" data-delete-course="${c.id}">🗑 Delete</button>
             </div>
@@ -1024,17 +1027,198 @@
     $("#recentSessions").innerHTML=recent.length?recent.map(s=>{const c=state.courses.find(x=>x.id===s.courseId);return `<div class="session-row"><span class="session-indicator"></span><div><strong>${esc(c?.name||"Course session")}</strong><small>${new Date(s.startedAt).toLocaleString()}</small></div><b>${Math.max(1,Math.round(sessionMs(s)/60000))} min</b></div>`;}).join(""):'<p class="muted small">No study sessions yet. Open a lesson and press “Start study” to begin tracking.</p>';
   }
 
-  // Pictures functions
+  // Pictures & Course Screenshot Folders functions
+  function getCourseFolders(courseId) {
+    if (!courseId) {
+      const fromPics = picturesList.map(p => p.folder).filter(Boolean);
+      return Array.from(new Set(["General", ...fromPics]));
+    }
+    const course = state.courses.find(c => c.id === courseId);
+    const explicit = (course && Array.isArray(course.screenshotFolders)) ? course.screenshotFolders : [];
+    const fromPics = picturesList.filter(p => p.courseId === courseId && p.folder).map(p => p.folder);
+    return Array.from(new Set(["General", ...explicit, ...fromPics].filter(Boolean)));
+  }
+
+  function updatePicFolderDatalist() {
+    const dl = $("#picFolderDatalist");
+    if (!dl) return;
+    const selectedCourseId = $("#picCourseSelect")?.value || picFilterState.courseId || "";
+    const folders = getCourseFolders(selectedCourseId);
+    dl.innerHTML = folders.map(f => `<option value="${esc(f)}"></option>`).join("");
+  }
+
   function updatePicCourseOptions() {
-    const courseSelects = [$("#picCourseFilter"), $("#picCourseSelect")];
+    const courseSelects = [$("#picCourseFilter"), $("#picCourseSelect"), $("#courseFolderSelect"), $("#courseFolderTargetSelect")];
     courseSelects.forEach(select => {
       if (!select) return;
-      const isFilter = select.id === "picCourseFilter";
+      const isFilter = select.id === "picCourseFilter" || select.id === "courseFolderSelect";
       const val = select.value;
       const defaultOption = isFilter ? '<option value="">All courses</option>' : '<option value="">None (General)</option>';
       select.innerHTML = defaultOption + state.courses.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join("");
-      select.value = val;
+      if (select.id === "courseFolderSelect" || select.id === "picCourseFilter") {
+        select.value = picFilterState.courseId || "";
+      } else if (select.id === "courseFolderTargetSelect") {
+        select.value = picFilterState.courseId || (state.courses[0] ? state.courses[0].id : "");
+      } else {
+        select.value = val;
+      }
     });
+    updatePicFolderDatalist();
+  }
+
+  function openCourseFolders(courseId, targetFolder = "") {
+    picFilterState.courseId = courseId || "";
+    picFilterState.folder = targetFolder || "";
+    navigate("pictures");
+    renderPictures();
+    const panel = $("#courseFoldersPanel");
+    if (panel && typeof panel.scrollIntoView === "function") {
+      panel.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }
+
+  function createCourseFolder(courseId, folderName) {
+    const name = (folderName || "").trim();
+    if (!name) return false;
+    let targetId = courseId || picFilterState.courseId || (state.courses[0] ? state.courses[0].id : "");
+    if (!targetId && state.courses.length > 0) targetId = state.courses[0].id;
+    const course = state.courses.find(c => c.id === targetId);
+    if (!course) {
+      notify("Please create or select a course first.");
+      return false;
+    }
+    if (!Array.isArray(course.screenshotFolders)) course.screenshotFolders = ["General"];
+    if (!course.screenshotFolders.includes(name)) {
+      course.screenshotFolders.push(name);
+      save();
+    }
+    picFilterState.courseId = targetId;
+    picFilterState.folder = name;
+    renderPictures();
+    notify(`📁 Folder "${name}" created inside "${course.name}"!`);
+    return true;
+  }
+
+  function renameCourseFolder(courseId, oldName, newName) {
+    const fresh = (newName || "").trim();
+    if (!fresh || fresh === oldName) return;
+    const course = state.courses.find(c => c.id === courseId);
+    if (course && Array.isArray(course.screenshotFolders)) {
+      const idx = course.screenshotFolders.indexOf(oldName);
+      if (idx !== -1) course.screenshotFolders[idx] = fresh;
+      else course.screenshotFolders.push(fresh);
+      save();
+    }
+    let count = 0;
+    picturesList.forEach(p => {
+      if (p.courseId === courseId && (p.folder === oldName || (!p.folder && oldName === "General"))) {
+        p.folder = fresh;
+        p.updatedAt = new Date().toISOString();
+        PicDB.save(p);
+        count++;
+      }
+    });
+    if (picFilterState.folder === oldName) picFilterState.folder = fresh;
+    renderPictures();
+    notify(`Folder renamed to "${fresh}" (${count} picture${count === 1 ? "" : "s"} updated).`);
+  }
+
+  function deleteCourseFolder(courseId, folderName) {
+    if (!folderName || folderName === "General") {
+      notify("The General folder cannot be deleted.");
+      return;
+    }
+    const course = state.courses.find(c => c.id === courseId);
+    if (course && Array.isArray(course.screenshotFolders)) {
+      course.screenshotFolders = course.screenshotFolders.filter(f => f !== folderName);
+      save();
+    }
+    let moved = 0;
+    picturesList.forEach(p => {
+      if (p.courseId === courseId && p.folder === folderName) {
+        p.folder = "General";
+        p.updatedAt = new Date().toISOString();
+        PicDB.save(p);
+        moved++;
+      }
+    });
+    picFilterState.folder = "General";
+    renderPictures();
+    notify(`Folder "${folderName}" deleted (${moved} picture${moved === 1 ? "" : "s"} moved to General).`);
+  }
+
+  async function saveDirectScreenshot(imgInfo, explicitCourseId = "", explicitFolder = "") {
+    if (!imgInfo || !imgInfo.dataUrl) return null;
+    let targetCourseId = explicitCourseId || picFilterState.courseId || currentCourseId || "";
+    if (!targetCourseId && state.courses.length > 0) targetCourseId = state.courses[0].id;
+    const course = state.courses.find(c => c.id === targetCourseId);
+    const targetFolder = explicitFolder || picFilterState.folder || "General";
+
+    let title = "";
+    if (imgInfo.originalName) {
+      const clean = imgInfo.originalName.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ").trim();
+      if (clean) title = clean.charAt(0).toUpperCase() + clean.slice(1);
+    }
+    if (!title || title.toLowerCase().startsWith("screenshot")) {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      const dateStr = now.toLocaleDateString([], { month: "short", day: "numeric" });
+      title = `${targetFolder} - ${dateStr} ${timeStr}`;
+    }
+
+    const newPic = {
+      id: uid(),
+      title,
+      category: "Screenshot",
+      courseId: targetCourseId || null,
+      folder: targetFolder || "General",
+      tags: "",
+      details: "",
+      dataUrl: imgInfo.dataUrl,
+      width: imgInfo.width || 0,
+      height: imgInfo.height || 0,
+      sizeBytes: imgInfo.sizeBytes || Math.round((imgInfo.dataUrl.length * 3) / 4),
+      originalName: imgInfo.originalName || "screenshot.jpg",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    if (course && targetFolder && targetFolder !== "General") {
+      if (!Array.isArray(course.screenshotFolders)) course.screenshotFolders = ["General"];
+      if (!course.screenshotFolders.includes(targetFolder)) {
+        course.screenshotFolders.push(targetFolder);
+        save();
+      }
+    }
+
+    await PicDB.save(newPic);
+    picturesList.unshift(newPic);
+    renderPictures();
+    const cLabel = course ? `"${course.name} › ${targetFolder}"` : `"${targetFolder}"`;
+    notify(`📸 Screenshot saved directly to ${cLabel}! Edit details anytime.`);
+    return newPic;
+  }
+
+  async function directCaptureScreenshot(courseId = "", folderName = "") {
+    try {
+      notify("Select window or screen to capture...");
+      const dataUrl = await captureScreenToDataUrl();
+      const img = new Image();
+      img.src = dataUrl;
+      await new Promise(res => { img.onload = () => res(); });
+      const imgInfo = {
+        dataUrl,
+        width: img.naturalWidth || img.width,
+        height: img.naturalHeight || img.height,
+        sizeBytes: Math.round((dataUrl.length * 3) / 4),
+        originalName: `screenshot-${Date.now()}.jpg`
+      };
+      await saveDirectScreenshot(imgInfo, courseId, folderName);
+    } catch (err) {
+      if (err.name !== "NotAllowedError" && err.name !== "AbortError") {
+        notify("Screen capture failed: " + err.message);
+      }
+    }
   }
 
   function renderPictures() {
@@ -1043,6 +1227,61 @@
     const countEl = $("#statPictures");
     if (countEl) countEl.textContent = picturesList.length;
 
+    // Course Folders Panel Rendering
+    const curCourse = state.courses.find(c => c.id === picFilterState.courseId);
+    const folderPillsList = $("#folderPillsList");
+    const folderTitle = $("#courseFolderTitle");
+    const folderSub = $("#courseFolderSubtitle");
+    const dropTargetName = $("#folderDropTargetName");
+    const renameBtn = $("#folderRenameBtn");
+    const deleteBtn = $("#folderDeleteBtn");
+
+    if (curCourse) {
+      if (folderTitle) folderTitle.textContent = `📚 ${curCourse.name} — Screenshot Folders`;
+      if (folderSub) {
+        folderSub.textContent = `Active folder: "${picFilterState.folder || 'All'}". Drag & drop or paste images directly without prompt forms.`;
+      }
+      if (dropTargetName) {
+        dropTargetName.textContent = `${curCourse.name} › ${picFilterState.folder || "General"}`;
+      }
+      if (folderPillsList) {
+        const folders = getCourseFolders(curCourse.id);
+        const coursePics = picturesList.filter(p => p.courseId === curCourse.id);
+        let pillsHtml = `
+          <button type="button" class="folder-pill ${picFilterState.folder === '' ? 'active' : ''}" data-folder="">
+            📁 All Folders <span class="folder-pill-count">${coursePics.length}</span>
+          </button>
+        `;
+        pillsHtml += folders.map(f => {
+          const count = coursePics.filter(p => (p.folder === f || (!p.folder && f === 'General'))).length;
+          return `
+            <button type="button" class="folder-pill ${picFilterState.folder === f ? 'active' : ''}" data-folder="${esc(f)}">
+              📁 ${esc(f)} <span class="folder-pill-count">${count}</span>
+            </button>
+          `;
+        }).join("");
+        folderPillsList.innerHTML = pillsHtml;
+      }
+      const canManage = Boolean(picFilterState.folder && picFilterState.folder !== "General");
+      if (renameBtn) renameBtn.hidden = !canManage;
+      if (deleteBtn) deleteBtn.hidden = !canManage;
+    } else {
+      if (folderTitle) folderTitle.textContent = "Course Screenshot Folders";
+      if (folderSub) {
+        folderSub.textContent = "Open a folder inside any course, then paste or drag & drop images directly without prompt forms.";
+      }
+      if (dropTargetName) {
+        dropTargetName.textContent = picFilterState.folder ? `Library › ${picFilterState.folder}` : "General";
+      }
+      if (folderPillsList) {
+        folderPillsList.innerHTML = `
+          <button type="button" class="folder-pill active" data-folder="">📁 All Folders <span class="folder-pill-count">${picturesList.length}</span></button>
+        `;
+      }
+      if (renameBtn) renameBtn.hidden = true;
+      if (deleteBtn) deleteBtn.hidden = true;
+    }
+
     let filtered = [...picturesList];
 
     if (picFilterState.search) {
@@ -1050,7 +1289,9 @@
       filtered = filtered.filter(p =>
         (p.title && p.title.toLowerCase().includes(q)) ||
         (p.details && p.details.toLowerCase().includes(q)) ||
-        (p.category && p.category.toLowerCase().includes(q))
+        (p.category && p.category.toLowerCase().includes(q)) ||
+        (p.tags && p.tags.toLowerCase().includes(q)) ||
+        (p.folder && p.folder.toLowerCase().includes(q))
       );
     }
 
@@ -1058,8 +1299,17 @@
       filtered = filtered.filter(p => p.category === picFilterState.category);
     }
 
+    // Sync Category Filter Pills in Pictures Vault
+    $$(".pic-cat-pill").forEach(pill => {
+      pill.classList.toggle("active", (pill.dataset.picCat || "") === (picFilterState.category || ""));
+    });
+
     if (picFilterState.courseId) {
       filtered = filtered.filter(p => p.courseId === picFilterState.courseId);
+    }
+
+    if (picFilterState.folder) {
+      filtered = filtered.filter(p => (p.folder || "General") === picFilterState.folder);
     }
 
     if (picFilterState.sort === "newest") {
@@ -1089,6 +1339,9 @@
     grid.innerHTML = filtered.map(p => {
       const course = state.courses.find(c => c.id === p.courseId);
       const dateStr = p.createdAt ? new Date(p.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "";
+      const isScreenshot = (p.category || "").toLowerCase().includes("screenshot");
+      const tagList = (p.tags || "").split(",").map(t => t.trim()).filter(Boolean);
+      const folderName = p.folder || "General";
       return `
         <article class="pic-card" data-pic-id="${p.id}">
           <div class="pic-card-thumb-wrap" data-view-pic="${p.id}" tabindex="0" role="button" aria-label="View picture ${esc(p.title)}">
@@ -1097,11 +1350,17 @@
           </div>
           <div class="pic-card-body">
             <div class="pic-card-badges">
-              <span class="pic-category-badge">${esc(p.category || "IMAGE")}</span>
+              <span class="pic-category-badge ${isScreenshot ? "badge-screenshot" : ""}">${isScreenshot ? "📸 " : ""}${esc(p.category || "IMAGE")}</span>
+              <span class="pic-folder-badge" title="Folder: ${esc(folderName)}">📁 ${esc(folderName)}</span>
               ${course ? `<span class="pic-course-badge" title="Course: ${esc(course.name)}">📚 ${esc(course.name)}</span>` : ""}
             </div>
             <h3 class="pic-card-title">${esc(p.title)}</h3>
-            <p class="pic-card-snippet">${esc(p.details || "No notes added.")}</p>
+            <p class="pic-card-snippet">${esc(p.details || "No notes added. Click edit to add notes or change folder.")}</p>
+            ${tagList.length > 0 ? `
+              <div class="pic-tags-list">
+                ${tagList.map(t => `<span class="pic-tag-pill">#${esc(t)}</span>`).join("")}
+              </div>
+            ` : ""}
             <div class="pic-card-footer">
               <small>${dateStr}${p.width && p.height ? ` · ${p.width}×${p.height}` : ""}</small>
               <div class="pic-card-actions">
@@ -1145,6 +1404,11 @@
     if (courseId) {
       $("#picCourseSelect").value = courseId;
     }
+    if ($("#picFolderInput")) {
+      $("#picFolderInput").value = picFilterState.folder || "General";
+    }
+    updatePicFolderDatalist();
+    if ($("#picTagsInput")) $("#picTagsInput").value = "";
     $("#picModalOverlay").hidden = false;
     $("#picTitleInput")?.focus();
   }
@@ -1167,7 +1431,12 @@
     $("#picCategoryInput").value = p.category || "Diagram";
     updatePicCourseOptions();
     $("#picCourseSelect").value = p.courseId || "";
+    if ($("#picFolderInput")) {
+      $("#picFolderInput").value = p.folder || "General";
+    }
+    updatePicFolderDatalist();
     $("#picDetailsInput").value = p.details || "";
+    if ($("#picTagsInput")) $("#picTagsInput").value = p.tags || "";
 
     $("#picDropEmpty").hidden = true;
     $("#picDropPreview").hidden = false;
@@ -1196,11 +1465,19 @@
     img.classList.remove("zoomed");
 
     $("#lightboxTitle").textContent = p.title || "Untitled Picture";
-    $("#lightboxCategory").textContent = p.category || "IMAGE";
+    const isScreenshot = (p.category || "").toLowerCase().includes("screenshot");
+    const catEl = $("#lightboxCategory");
+    if (catEl) {
+      catEl.textContent = (isScreenshot ? "📸 " : "") + (p.category || "IMAGE");
+      catEl.className = "pic-category-badge " + (isScreenshot ? "badge-screenshot" : "");
+    }
     const courseEl = $("#lightboxCourse");
     if (course) {
       courseEl.hidden = false;
-      courseEl.textContent = `📚 ${course.name}`;
+      courseEl.textContent = `📚 ${course.name} › 📁 ${p.folder || "General"}`;
+    } else if (p.folder) {
+      courseEl.hidden = false;
+      courseEl.textContent = `📁 ${p.folder}`;
     } else {
       courseEl.hidden = true;
     }
@@ -1211,7 +1488,9 @@
     $("#lightboxDate").textContent = `Added ${dateStr}${dimStr}${sizeStr}`;
 
     const detailsEl = $("#lightboxDetails");
-    detailsEl.textContent = p.details ? p.details : "No notes or explanation recorded for this picture.";
+    const tagList = (p.tags || "").split(",").map(t => t.trim()).filter(Boolean);
+    const tagStr = tagList.length > 0 ? `\n\nTags: ${tagList.map(t => `#${t}`).join(" ")}` : "";
+    detailsEl.textContent = (p.details ? p.details : "No notes or explanation recorded for this picture.") + tagStr;
 
     $("#picLightboxOverlay").hidden = false;
   }
@@ -2540,8 +2819,21 @@
     }
     const category = $("#picCategoryInput").value || "Diagram";
     const courseId = $("#picCourseSelect").value || null;
+    const folder = $("#picFolderInput") ? ($("#picFolderInput").value.trim() || "General") : "General";
     const details = $("#picDetailsInput").value.trim();
+    const tags = $("#picTagsInput") ? $("#picTagsInput").value.trim() : "";
     const now = new Date().toISOString();
+
+    if (courseId && folder && folder !== "General") {
+      const c = state.courses.find(x => x.id === courseId);
+      if (c) {
+        if (!Array.isArray(c.screenshotFolders)) c.screenshotFolders = ["General"];
+        if (!c.screenshotFolders.includes(folder)) {
+          c.screenshotFolders.push(folder);
+          save();
+        }
+      }
+    }
 
     if (editingPicId) {
       const idx = picturesList.findIndex(x => x.id === editingPicId);
@@ -2551,7 +2843,9 @@
           title,
           category,
           courseId,
+          folder,
           details,
+          tags,
           dataUrl: stagedImageData.dataUrl,
           width: stagedImageData.width,
           height: stagedImageData.height,
@@ -2568,7 +2862,9 @@
         title,
         category,
         courseId,
+        folder,
         details,
+        tags,
         dataUrl: stagedImageData.dataUrl,
         width: stagedImageData.width,
         height: stagedImageData.height,
@@ -2644,11 +2940,27 @@
         if (!file) continue;
         try {
           const imgInfo = await processImageFile(file);
-          if ($("#picModalOverlay")?.hidden) {
-            openAddPicModal();
+          // 1. If Smart Adder is active, feed image to Smart Adder
+          if (!$("#smartAddModalOverlay")?.hidden) {
+            stagedSmartImage = imgInfo;
+            showSmartDetection("image", imgInfo);
+            notify("Screenshot pasted into Smart Adder.");
+            return;
           }
-          setStagedImage(imgInfo, true);
-          notify("Image pasted from clipboard.");
+          // 2. If Picture Edit Modal is open, stage it there
+          if (!$("#picModalOverlay")?.hidden) {
+            setStagedImage(imgInfo, true);
+            const cat = $("#picCategoryInput");
+            if (cat && (!cat.value || cat.value === "Diagram")) {
+              cat.value = "Screenshot";
+            }
+            notify("Screenshot pasted into editor.");
+            return;
+          }
+          // 3. ZERO-PROMPT DIRECT SAVE: Paste directly into active course folder!
+          const targetCourse = picFilterState.courseId || currentCourseId || (state.courses[0] ? state.courses[0].id : "");
+          const targetFolder = picFilterState.folder || "General";
+          await saveDirectScreenshot(imgInfo, targetCourse, targetFolder);
         } catch (err) {
           notify(err.message || "Failed to paste image.");
         }
@@ -2985,6 +3297,828 @@
     navigate("notes");
   });
 
+  // ============================================================
+  // SCREENSHOT CAPTURE ENGINE
+  // ============================================================
+  async function captureScreenToDataUrl() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+      throw new Error("Screen capture API not supported in this browser. You can still paste screenshots using Ctrl+V or upload an image file.");
+    }
+    const stream = await navigator.mediaDevices.getDisplayMedia({
+      video: { cursor: "always" },
+      audio: false
+    });
+    const video = document.createElement("video");
+    video.srcObject = stream;
+    video.autoplay = true;
+    await new Promise(res => { video.onloadedmetadata = () => res(); });
+    await new Promise(res => setTimeout(res, 200));
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth || 1920;
+    canvas.height = video.videoHeight || 1080;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    stream.getTracks().forEach(t => t.stop());
+    return canvas.toDataURL("image/jpeg", 0.92);
+  }
+
+  async function openCaptureScreenshot(prefillCourseId = null, prefillTitle = null, prefillDetails = null) {
+    try {
+      notify("Select the window or screen tab to capture...");
+      const dataUrl = await captureScreenToDataUrl();
+      const img = new Image();
+      img.src = dataUrl;
+      await new Promise(res => { img.onload = () => res(); });
+
+      openAddPicModal(prefillCourseId || currentCourseId || "");
+      setStagedImage({
+        dataUrl,
+        width: img.naturalWidth || img.width,
+        height: img.naturalHeight || img.height,
+        sizeBytes: Math.round((dataUrl.length * 3) / 4),
+        originalName: `screenshot-${Date.now()}.jpg`
+      });
+
+      const titleInput = $("#picTitleInput");
+      if (titleInput) {
+        if (prefillTitle) {
+          titleInput.value = prefillTitle;
+        } else {
+          const c = state.courses.find(x => x.id === (prefillCourseId || currentCourseId));
+          const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          titleInput.value = c ? `${c.name} - Screenshot ${timeStr}` : `Study Screenshot - ${timeStr}`;
+        }
+      }
+
+      const catSelect = $("#picCategoryInput");
+      if (catSelect) catSelect.value = "Screenshot";
+
+      const detailsInput = $("#picDetailsInput");
+      if (detailsInput && prefillDetails) {
+        detailsInput.value = prefillDetails;
+      }
+
+      const tagsInput = $("#picTagsInput");
+      if (tagsInput) {
+        tagsInput.value = "screenshot, study";
+      }
+
+      notify("Screenshot captured! Review details and save.");
+    } catch (err) {
+      if (err.name === "NotAllowedError" || err.message?.includes("cancelled")) {
+        return;
+      }
+      notify(err.message || "Screen capture not supported or cancelled.");
+    }
+  }
+
+  // ============================================================
+  // UNIVERSAL SMART ADDER ENGINE
+  // ============================================================
+  let smartDetectedItem = null;
+  let stagedSmartImage = null;
+
+  function openSmartAddModal(initialText = "") {
+    const overlay = $("#smartAddModalOverlay");
+    if (!overlay) return;
+    overlay.hidden = false;
+    const input = $("#smartAddInput");
+    if (input) {
+      input.value = initialText;
+      if (initialText) {
+        processSmartInput(initialText);
+      } else {
+        resetSmartAdder();
+      }
+      setTimeout(() => input.focus(), 60);
+    }
+  }
+
+  function closeSmartAddModal() {
+    const overlay = $("#smartAddModalOverlay");
+    if (overlay) overlay.hidden = true;
+    resetSmartAdder();
+  }
+
+  function resetSmartAdder() {
+    smartDetectedItem = null;
+    stagedSmartImage = null;
+    const input = $("#smartAddInput");
+    if (input) input.value = "";
+    const empty = $("#smartDetectEmpty");
+    const content = $("#smartDetectContent");
+    if (empty) empty.hidden = false;
+    if (content) content.hidden = true;
+    const preview = $("#smartDetectPreview");
+    if (preview) preview.innerHTML = "";
+    const fields = $("#smartDetectFields");
+    if (fields) fields.innerHTML = "";
+  }
+
+  function renderCourseSelectOptions(selectedId = "", showCreateOption = true) {
+    let opts = '<option value="">Choose target course...</option>';
+    opts += state.courses.map(c => `<option value="${c.id}" ${c.id === selectedId ? "selected" : ""}>📚 ${esc(c.name)}</option>`).join("");
+    if (showCreateOption) {
+      opts += '<option value="__new__">＋ Create new course...</option>';
+    }
+    return opts;
+  }
+
+  async function processSmartInput(val) {
+    const trimmed = typeof val === "string" ? val.trim() : "";
+    if (!trimmed && !stagedSmartImage) {
+      resetSmartAdder();
+      return;
+    }
+
+    // 1. Check if Course Package JSON
+    if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        const course = parsed.course || (parsed.name && Array.isArray(parsed.modules) ? parsed : null);
+        if (course && typeof course.name === "string") {
+          showSmartDetection("course_json", course);
+          return;
+        }
+      } catch {}
+    }
+
+    // 2. Check if YouTube Playlist
+    const plInfo = parsePlaylist(trimmed);
+    if (plInfo && plInfo.playlistId) {
+      showSmartDetection("playlist", { url: trimmed, ...plInfo });
+      return;
+    }
+
+    // 3. Check if Single YouTube Video
+    const vId = videoId(trimmed);
+    if (vId && vId !== "videoseries") {
+      showSmartDetection("video", { url: trimmed, videoId: vId });
+      return;
+    }
+
+    // 4. Check if Image (Data URL or staged file)
+    if (stagedSmartImage || trimmed.startsWith("data:image/")) {
+      const imgData = stagedSmartImage || { dataUrl: trimmed, width: 800, height: 600, sizeBytes: trimmed.length, originalName: "screenshot.jpg" };
+      showSmartDetection("image", imgData);
+      return;
+    }
+
+    // 5. Check if PDF
+    if (trimmed.endsWith(".pdf") || trimmed.startsWith("data:application/pdf")) {
+      showSmartDetection("pdf", { url: trimmed, fileName: "document.pdf", dataUrl: trimmed.startsWith("data:") ? trimmed : null });
+      return;
+    }
+
+    // 6. Default to Study Note
+    if (trimmed.length > 0) {
+      showSmartDetection("note", { content: trimmed });
+      return;
+    }
+
+    resetSmartAdder();
+  }
+
+  function showSmartDetection(type, data) {
+    smartDetectedItem = { type, data };
+    const empty = $("#smartDetectEmpty");
+    const content = $("#smartDetectContent");
+    if (empty) empty.hidden = true;
+    if (content) content.hidden = false;
+
+    const badge = $("#smartDetectBadge");
+    const desc = $("#smartDetectTypeDesc");
+    const preview = $("#smartDetectPreview");
+    const fields = $("#smartDetectFields");
+    const submitBtn = $("#smartAddSubmitBtn");
+
+    const preferredCourseId = currentCourseId || (state.courses[0] ? state.courses[0].id : "");
+
+    if (type === "video") {
+      if (badge) badge.textContent = "📺 Single Video";
+      if (desc) desc.textContent = `YouTube Video ID: ${data.videoId}`;
+      if (preview) preview.innerHTML = `<img src="${thumb(data.videoId)}" alt="Video thumbnail">`;
+      if (fields) {
+        fields.innerHTML = `
+          <div>
+            <label for="smartItemTitle">Lesson Title <span class="optional">Optional</span></label>
+            <input type="text" id="smartItemTitle" placeholder="Leave blank to use default lesson title">
+          </div>
+          <div>
+            <label for="smartItemCourse">Target Course <span class="required">*</span></label>
+            <select id="smartItemCourse" required>${renderCourseSelectOptions(preferredCourseId)}</select>
+          </div>
+          <div id="smartNewCourseWrap" hidden style="margin-top:6px">
+            <label for="smartNewCourseName">New Course Name <span class="required">*</span></label>
+            <input type="text" id="smartNewCourseName" placeholder="e.g. JavaScript Masterclass">
+          </div>
+          <div style="margin-top:6px">
+            <label for="smartItemModule">Module Name <span class="required">*</span></label>
+            <input type="text" id="smartItemModule" value="General Lessons" required>
+          </div>
+        `;
+      }
+      if (submitBtn) submitBtn.innerHTML = "Add Video to Course <span>＋</span>";
+    } else if (type === "playlist") {
+      if (badge) badge.textContent = "📑 YouTube Playlist";
+      if (desc) desc.textContent = `Playlist ID: ${data.playlistId}`;
+      const thumbSrc = data.videoId ? thumb(data.videoId) : null;
+      if (preview) {
+        preview.innerHTML = thumbSrc
+          ? `<img src="${thumbSrc}" alt="Playlist thumbnail">`
+          : `<div class="preview-placeholder" style="background:#262238;color:#b9adff;font-size:24px">≡</div>`;
+      }
+      if (fields) {
+        fields.innerHTML = `
+          <div>
+            <label for="smartItemTitle">Playlist Title <span class="required">*</span></label>
+            <input type="text" id="smartItemTitle" placeholder="e.g. Complete React & Next.js Series" required>
+          </div>
+          <div>
+            <label for="smartItemCourse">Target Course <span class="required">*</span></label>
+            <select id="smartItemCourse" required>${renderCourseSelectOptions(preferredCourseId)}</select>
+          </div>
+          <div id="smartNewCourseWrap" hidden style="margin-top:6px">
+            <label for="smartNewCourseName">New Course Name <span class="required">*</span></label>
+            <input type="text" id="smartNewCourseName" placeholder="e.g. Frontend Development">
+          </div>
+          <div style="margin-top:6px">
+            <label for="smartItemModule">Module Name <span class="required">*</span></label>
+            <input type="text" id="smartItemModule" value="Playlist Series" required>
+          </div>
+        `;
+      }
+      if (submitBtn) submitBtn.innerHTML = "Add Playlist to Course <span>＋</span>";
+    } else if (type === "image") {
+      if (badge) badge.textContent = "📸 Screenshot / Image";
+      if (desc) desc.textContent = `${data.width || "?"} × ${data.height || "?"} px · ${formatBytes(data.sizeBytes || 0)}`;
+      if (preview) preview.innerHTML = `<img src="${data.dataUrl}" alt="Screenshot preview">`;
+      const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      if (fields) {
+        fields.innerHTML = `
+          <div class="pic-form-grid">
+            <div>
+              <label for="smartItemTitle">Title <span class="required">*</span></label>
+              <input type="text" id="smartItemTitle" value="Screenshot ${timeStr}" required>
+            </div>
+            <div>
+              <label for="smartItemCategory">Category</label>
+              <select id="smartItemCategory">
+                <option value="Screenshot" selected>Screenshot</option>
+                <option value="Code Screenshot">Code Screenshot</option>
+                <option value="Lecture Slide">Lecture Slide</option>
+                <option value="Diagram">Diagram</option>
+                <option value="Formula">Formula</option>
+                <option value="Whiteboard">Whiteboard</option>
+                <option value="Mindmap">Mindmap</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+          </div>
+          <div style="margin-top:6px">
+            <label for="smartItemTags">Tags <span class="optional">Optional — comma-separated</span></label>
+            <input type="text" id="smartItemTags" value="screenshot, study" placeholder="e.g. code, react, exam">
+          </div>
+          <div style="margin-top:6px">
+            <label for="smartItemCourse">Link to Course <span class="optional">Optional</span></label>
+            <select id="smartItemCourse">${renderCourseSelectOptions(preferredCourseId, false)}</select>
+          </div>
+          <div style="margin-top:6px">
+            <label for="smartItemDetails">Notes & Details <span class="optional">Optional</span></label>
+            <textarea id="smartItemDetails" rows="2" placeholder="Key takeaways or summary..."></textarea>
+          </div>
+        `;
+      }
+      if (submitBtn) submitBtn.innerHTML = "Save to Pictures <span>＋</span>";
+    } else if (type === "pdf") {
+      if (badge) badge.textContent = "📄 PDF Document";
+      if (desc) desc.textContent = data.fileName || "PDF document";
+      if (preview) preview.innerHTML = `<div style="font-size:36px;color:var(--red)">📄</div>`;
+      if (fields) {
+        fields.innerHTML = `
+          <div class="pic-form-grid">
+            <div>
+              <label for="smartItemTitle">Title <span class="required">*</span></label>
+              <input type="text" id="smartItemTitle" value="${esc((data.fileName || "Document").replace(/\.pdf$/i, ""))}" required>
+            </div>
+            <div>
+              <label for="smartItemCategory">Category</label>
+              <select id="smartItemCategory">
+                <option value="Textbook">Textbook</option>
+                <option value="Lecture Slides" selected>Lecture Slides</option>
+                <option value="Cheatsheet">Cheatsheet</option>
+                <option value="Research Paper">Research Paper</option>
+                <option value="Lecture Notes">Lecture Notes</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+          </div>
+          <div style="margin-top:6px">
+            <label for="smartItemCourse">Link to Course <span class="optional">Optional</span></label>
+            <select id="smartItemCourse">${renderCourseSelectOptions(preferredCourseId, false)}</select>
+          </div>
+        `;
+      }
+      if (submitBtn) submitBtn.innerHTML = "Save to PDF Vault <span>＋</span>";
+    } else if (type === "note") {
+      if (badge) badge.textContent = "📝 Study Note";
+      if (desc) desc.textContent = `${data.content.length} characters`;
+      const firstLine = data.content.split("\n").find(l => l.trim().length > 0) || "Study Note";
+      const cleanTitle = firstLine.replace(/^[#*\-•\s]+/, "").slice(0, 60);
+      if (preview) {
+        preview.innerHTML = `<div style="padding:10px 14px;font-size:12px;color:var(--text);font-family:monospace;max-height:80px;overflow:hidden;text-overflow:ellipsis">${esc(data.content.slice(0, 200))}...</div>`;
+      }
+      if (fields) {
+        fields.innerHTML = `
+          <div class="pic-form-grid">
+            <div>
+              <label for="smartItemTitle">Title <span class="required">*</span></label>
+              <input type="text" id="smartItemTitle" value="${esc(cleanTitle)}" required>
+            </div>
+            <div>
+              <label for="smartItemCategory">Category</label>
+              <select id="smartItemCategory">
+                <option value="Lecture Notes">Lecture Notes</option>
+                <option value="Summary" selected>Summary</option>
+                <option value="Formula Sheet">Formula Sheet</option>
+                <option value="Cheatsheet">Cheatsheet</option>
+                <option value="Revision">Revision</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+          </div>
+          <div style="margin-top:6px">
+            <label for="smartItemCourse">Link to Course <span class="optional">Optional</span></label>
+            <select id="smartItemCourse">${renderCourseSelectOptions(preferredCourseId, false)}</select>
+          </div>
+          <div style="margin-top:6px">
+            <label for="smartItemDetails">Note Content <span class="required">*</span></label>
+            <textarea id="smartItemDetails" rows="4" required>${esc(data.content)}</textarea>
+          </div>
+        `;
+      }
+      if (submitBtn) submitBtn.innerHTML = "Save Note to Library <span>＋</span>";
+    } else if (type === "course_json") {
+      if (badge) badge.textContent = "📦 Course Package JSON";
+      if (desc) desc.textContent = `Course: "${data.name}"`;
+      const modCount = (data.modules || []).length;
+      const lessonCount = (data.modules || []).reduce((n, m) => n + (Array.isArray(m.lessons) ? m.lessons.length : 0), 0);
+      if (preview) {
+        preview.innerHTML = `
+          <div style="padding:12px;text-align:center">
+            <h4 style="margin:0 0 4px;font-size:15px;color:var(--text)">${esc(data.name)}</h4>
+            <span class="course-category-badge">${esc(data.category || "General")}</span>
+            <p class="muted small" style="margin:6px 0 0">${modCount} modules · ${lessonCount} lessons</p>
+          </div>
+        `;
+      }
+      if (fields) {
+        fields.innerHTML = `
+          <div style="background:var(--input-bg);padding:10px 12px;border-radius:8px;font-size:12px;color:var(--text)">
+            Ready to import <strong>${esc(data.name)}</strong> into your FocusLearn library.
+          </div>
+        `;
+      }
+      if (submitBtn) submitBtn.innerHTML = "Import Course Package <span>＋</span>";
+    }
+
+    const courseSel = $("#smartItemCourse");
+    const wrap = $("#smartNewCourseWrap");
+    if (courseSel && wrap) {
+      courseSel.addEventListener("change", () => {
+        wrap.hidden = (courseSel.value !== "__new__");
+        if (!wrap.hidden) $("#smartNewCourseName")?.focus();
+      });
+    }
+  }
+
+  async function handleSmartAddSubmit(e) {
+    if (e) e.preventDefault();
+    if (!smartDetectedItem) return;
+
+    const { type, data } = smartDetectedItem;
+
+    function getResolvedCourseId(required = true) {
+      const courseSel = $("#smartItemCourse");
+      if (!courseSel) return null;
+      let cid = courseSel.value;
+      if (cid === "__new__") {
+        const newName = ($("#smartNewCourseName")?.value || "").trim();
+        if (!newName) {
+          notify("Please enter a name for the new course.");
+          return null;
+        }
+        cid = uid();
+        state.courses.push({
+          id: cid,
+          name: newName,
+          category: "General",
+          description: "Created via Smart Adder",
+          createdAt: new Date().toISOString(),
+          modules: [],
+          lastWatched: null
+        });
+      }
+      if (required && !cid) {
+        notify("Please choose or create a course.");
+        return null;
+      }
+      return cid;
+    }
+
+    if (type === "video") {
+      const cid = getResolvedCourseId(true);
+      if (!cid) return;
+      const c = state.courses.find(x => x.id === cid);
+      if (!c) { notify("Selected course not found."); return; }
+      const modName = ($("#smartItemModule")?.value || "General Lessons").trim();
+      let m = c.modules.find(x => x.name.toLowerCase() === modName.toLowerCase());
+      if (!m) { m = { id: uid(), name: modName, lessons: [] }; c.modules.push(m); }
+      const customTitle = ($("#smartItemTitle")?.value || "").trim();
+      const title = customTitle || `YouTube Lesson ${m.lessons.length + 1}`;
+      m.lessons.push({ id: uid(), videoId: data.videoId, title, completed: false, addedAt: new Date().toISOString() });
+      save();
+      closeSmartAddModal();
+      navigate("courses");
+      notify(`Video "${title}" added to ${c.name}!`);
+    } else if (type === "playlist") {
+      const cid = getResolvedCourseId(true);
+      if (!cid) return;
+      const c = state.courses.find(x => x.id === cid);
+      if (!c) { notify("Selected course not found."); return; }
+      const title = ($("#smartItemTitle")?.value || "YouTube Playlist").trim();
+      const modName = ($("#smartItemModule")?.value || "Playlist Series").trim();
+      let m = c.modules.find(x => x.name.toLowerCase() === modName.toLowerCase());
+      if (!m) { m = { id: uid(), name: modName, lessons: [] }; c.modules.push(m); }
+      m.lessons.push({
+        id: uid(),
+        videoId: data.videoId || "videoseries",
+        playlistId: data.playlistId,
+        title,
+        isPlaylist: true,
+        completed: false,
+        addedAt: new Date().toISOString(),
+        videos: []
+      });
+      save();
+      closeSmartAddModal();
+      navigate("courses");
+      notify(`Playlist "${title}" added to ${c.name}!`);
+    } else if (type === "image") {
+      const title = ($("#smartItemTitle")?.value || "Screenshot").trim();
+      const category = $("#smartItemCategory")?.value || "Screenshot";
+      const tags = ($("#smartItemTags")?.value || "").trim();
+      const courseId = getResolvedCourseId(false) || null;
+      const details = ($("#smartItemDetails")?.value || "").trim();
+      const now = new Date().toISOString();
+      const newPic = {
+        id: uid(),
+        title,
+        category,
+        courseId,
+        details,
+        tags,
+        dataUrl: data.dataUrl,
+        width: data.width || 800,
+        height: data.height || 600,
+        sizeBytes: data.sizeBytes || 0,
+        originalName: data.originalName || "screenshot.jpg",
+        createdAt: now,
+        updatedAt: now
+      };
+      await PicDB.save(newPic);
+      picturesList.unshift(newPic);
+      closeSmartAddModal();
+      navigate("pictures");
+      notify(`Picture "${title}" saved to Picture Vault!`);
+    } else if (type === "pdf") {
+      const title = ($("#smartItemTitle")?.value || "Document").trim();
+      const category = $("#smartItemCategory")?.value || "Lecture Slides";
+      const courseId = getResolvedCourseId(false) || null;
+      const now = new Date().toISOString();
+      const newPdf = {
+        id: uid(),
+        type: "pdf",
+        title,
+        category,
+        courseId,
+        details: "Imported via Smart Adder",
+        pdfData: data.dataUrl || "",
+        fileName: data.fileName || "document.pdf",
+        fileSize: data.fileSize || 0,
+        createdAt: now,
+        updatedAt: now
+      };
+      await DocDB.save(newPdf);
+      docsList.unshift(newPdf);
+      closeSmartAddModal();
+      navigate("notes");
+      notify(`PDF "${title}" saved to Document Vault!`);
+    } else if (type === "note") {
+      const title = ($("#smartItemTitle")?.value || "Study Note").trim();
+      const category = $("#smartItemCategory")?.value || "Summary";
+      const courseId = getResolvedCourseId(false) || null;
+      const content = ($("#smartItemDetails")?.value || data.content).trim();
+      const now = new Date().toISOString();
+      const newNote = {
+        id: uid(),
+        type: "note",
+        title,
+        category,
+        courseId,
+        details: content.slice(0, 100),
+        content,
+        createdAt: now,
+        updatedAt: now
+      };
+      await DocDB.save(newNote);
+      docsList.unshift(newNote);
+      closeSmartAddModal();
+      navigate("notes");
+      notify(`Note "${title}" saved to Notes Vault!`);
+    } else if (type === "course_json") {
+      currentReceivingCourseData = data;
+      handleImportReceivedCourse();
+      closeSmartAddModal();
+    }
+  }
+
+  // ============================================================
+  // SHARE COURSE & RECEIVE COURSE JSON
+  // ============================================================
+  let currentSharingCourse = null;
+  let currentReceivingCourseData = null;
+
+  function openShareCourseModal(courseId) {
+    const c = state.courses.find(x => x.id === courseId);
+    if (!c) { notify("Course not found."); return; }
+    currentSharingCourse = c;
+
+    const cleanCourse = {
+      id: c.id,
+      name: c.name,
+      category: c.category || "General",
+      description: c.description || "",
+      createdAt: c.createdAt || new Date().toISOString(),
+      modules: (c.modules || []).map(m => ({
+        id: m.id || uid(),
+        name: m.name,
+        lessons: (m.lessons || []).map(l => ({
+          id: l.id || uid(),
+          title: l.title,
+          videoId: l.videoId || null,
+          playlistId: l.playlistId || null,
+          isPlaylist: !!(l.isPlaylist || l.playlistId),
+          completed: false,
+          videos: Array.isArray(l.videos) ? l.videos.map(v => ({
+            id: v.id || uid(),
+            title: v.title,
+            videoId: v.videoId,
+            completed: false
+          })) : []
+        }))
+      }))
+    };
+
+    const payload = {
+      app: "FocusLearn",
+      format: "course_package",
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      course: cleanCourse
+    };
+
+    const jsonStr = JSON.stringify(payload, null, 2);
+    const s = stats(c);
+
+    const catEl = $("#shareCourseCategory"); if (catEl) catEl.textContent = c.category || "General";
+    const nameEl = $("#shareCourseName"); if (nameEl) nameEl.textContent = c.name;
+    const descEl = $("#shareCourseDesc"); if (descEl) descEl.textContent = c.description || "No description provided.";
+    const modEl = $("#shareModuleCount"); if (modEl) modEl.textContent = (c.modules || []).length;
+    const lesEl = $("#shareLessonCount"); if (lesEl) lesEl.textContent = s.total;
+    const jsonArea = $("#shareCourseJson"); if (jsonArea) jsonArea.value = jsonStr;
+    const sizeEl = $("#shareJsonSize"); if (sizeEl) sizeEl.textContent = `${(new Blob([jsonStr]).size / 1024).toFixed(1)} KB`;
+
+    $("#shareCourseModalOverlay").hidden = false;
+  }
+
+  function closeShareCourseModal() {
+    $("#shareCourseModalOverlay").hidden = true;
+    currentSharingCourse = null;
+    const copyBtn = $("#copyCourseJsonBtn");
+    if (copyBtn) copyBtn.innerHTML = "<span>📋</span> Copy JSON to Clipboard";
+  }
+
+  function handleCopyShareJson() {
+    const jsonStr = $("#shareCourseJson")?.value;
+    if (!jsonStr) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(jsonStr).then(() => {
+        const btn = $("#copyCourseJsonBtn");
+        if (btn) btn.innerHTML = "<span>✓</span> Copied JSON!";
+        setTimeout(() => { if (btn) btn.innerHTML = "<span>📋</span> Copy JSON to Clipboard"; }, 2000);
+        notify("Course JSON copied to clipboard.");
+      });
+    } else {
+      $("#shareCourseJson")?.select();
+      document.execCommand("copy");
+      notify("Course JSON copied to clipboard.");
+    }
+  }
+
+  function handleDownloadShareJson() {
+    if (!currentSharingCourse) return;
+    const jsonStr = $("#shareCourseJson")?.value;
+    if (!jsonStr) return;
+    const safeName = (currentSharingCourse.name || "course").toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    downloadTextFile(jsonStr, `FocusLearn-Course-${safeName}.json`);
+    notify("Course JSON downloaded.");
+  }
+
+  function handleCopyShareUrl() {
+    const jsonStr = $("#shareCourseJson")?.value;
+    if (!jsonStr) return;
+    try {
+      const url = `${window.location.origin}${window.location.pathname}#course_json=${encodeURIComponent(jsonStr)}`;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(() => {
+          const btn = $("#copyCourseShareUrlBtn");
+          if (btn) btn.innerHTML = "<span>✓</span> Share Link Copied!";
+          setTimeout(() => { if (btn) btn.innerHTML = "<span>🔗</span> Copy Shareable URL Link"; }, 2000);
+          notify("Share link copied! Anyone opening this link can receive the course directly.");
+        });
+      }
+    } catch {
+      notify("Could not generate share link.");
+    }
+  }
+
+  function openReceiveCourseModal(initialJson = "") {
+    $("#receiveCourseModalOverlay").hidden = false;
+    const input = $("#receiveCourseInput");
+    if (input) {
+      input.value = initialJson;
+      validateReceiveCourseJson(initialJson);
+      setTimeout(() => input.focus(), 60);
+    }
+  }
+
+  function closeReceiveCourseModal() {
+    $("#receiveCourseModalOverlay").hidden = true;
+    currentReceivingCourseData = null;
+    const input = $("#receiveCourseInput");
+    if (input) input.value = "";
+    const prev = $("#receivePreviewCard"); if (prev) prev.hidden = true;
+    const err = $("#receiveErrorBox"); if (err) err.hidden = true;
+    const btn = $("#receiveConfirmBtn"); if (btn) btn.disabled = true;
+  }
+
+  function validateReceiveCourseJson(rawStr) {
+    const trimmed = (rawStr || "").trim();
+    const previewCard = $("#receivePreviewCard");
+    const errorBox = $("#receiveErrorBox");
+    const confirmBtn = $("#receiveConfirmBtn");
+
+    if (!trimmed) {
+      if (previewCard) previewCard.hidden = true;
+      if (errorBox) errorBox.hidden = true;
+      if (confirmBtn) confirmBtn.disabled = true;
+      currentReceivingCourseData = null;
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(trimmed);
+      let course = parsed.course || (parsed.name && Array.isArray(parsed.modules) ? parsed : null);
+      if (Array.isArray(parsed) && parsed[0]) {
+        course = parsed[0].course || parsed[0];
+      }
+
+      if (!course || typeof course.name !== "string" || !course.name.trim()) {
+        throw new Error("Missing valid course 'name' property.");
+      }
+      if (!Array.isArray(course.modules)) {
+        course.modules = [];
+      }
+
+      currentReceivingCourseData = course;
+      if (errorBox) errorBox.hidden = true;
+      if (previewCard) previewCard.hidden = false;
+      if (confirmBtn) confirmBtn.disabled = false;
+
+      const catEl = $("#receivePreviewCategory"); if (catEl) catEl.textContent = course.category || "General";
+      const nameEl = $("#receivePreviewName"); if (nameEl) nameEl.textContent = course.name;
+      const descEl = $("#receivePreviewDesc"); if (descEl) descEl.textContent = course.description || "No description provided.";
+
+      const totalLessons = course.modules.reduce((sum, m) => sum + (Array.isArray(m.lessons) ? m.lessons.length : 0), 0);
+      const summaryEl = $("#receiveModulesSummary");
+      if (summaryEl) {
+        summaryEl.innerHTML = `
+          <div style="font-weight:700;color:var(--text);margin-bottom:4px">
+            ${course.modules.length} module${course.modules.length === 1 ? "" : "s"} · ${totalLessons} lesson${totalLessons === 1 ? "" : "s"}
+          </div>
+          ${course.modules.map((m, idx) => `
+            <div><strong>${idx + 1}. ${esc(m.name || "Untitled Module")}</strong> — ${(m.lessons || []).length} lesson${(m.lessons || []).length === 1 ? "" : "s"}</div>
+          `).join("")}
+        `;
+      }
+    } catch (err) {
+      currentReceivingCourseData = null;
+      if (previewCard) previewCard.hidden = true;
+      if (errorBox) errorBox.hidden = false;
+      if (confirmBtn) confirmBtn.disabled = true;
+      const msg = $("#receiveErrorMessage");
+      if (msg) msg.textContent = `Invalid course JSON: ${err.message}`;
+    }
+  }
+
+  function handleImportReceivedCourse() {
+    if (!currentReceivingCourseData) return;
+    const regenerateIds = $("#receiveRegenerateIds") ? $("#receiveRegenerateIds").checked : true;
+    const course = currentReceivingCourseData;
+
+    let targetCourse;
+    if (regenerateIds) {
+      targetCourse = {
+        id: uid(),
+        name: course.name,
+        category: course.category || "General",
+        description: course.description || "",
+        createdAt: new Date().toISOString(),
+        lastWatched: null,
+        modules: (course.modules || []).map(m => ({
+          id: uid(),
+          name: m.name || "Module",
+          lessons: (m.lessons || []).map(l => ({
+            id: uid(),
+            title: l.title || "Lesson",
+            videoId: l.videoId || null,
+            playlistId: l.playlistId || null,
+            isPlaylist: !!(l.isPlaylist || l.playlistId),
+            completed: false,
+            addedAt: new Date().toISOString(),
+            videos: Array.isArray(l.videos) ? l.videos.map(v => ({
+              id: uid(),
+              title: v.title || "Video",
+              videoId: v.videoId,
+              completed: false
+            })) : []
+          }))
+        }))
+      };
+    } else {
+      const existingIdx = state.courses.findIndex(c => c.id === course.id);
+      targetCourse = {
+        id: course.id || uid(),
+        name: course.name,
+        category: course.category || "General",
+        description: course.description || "",
+        createdAt: course.createdAt || new Date().toISOString(),
+        lastWatched: null,
+        modules: (course.modules || []).map(m => ({
+          id: m.id || uid(),
+          name: m.name || "Module",
+          lessons: (m.lessons || []).map(l => ({
+            id: l.id || uid(),
+            title: l.title || "Lesson",
+            videoId: l.videoId || null,
+            playlistId: l.playlistId || null,
+            isPlaylist: !!(l.isPlaylist || l.playlistId),
+            completed: !!l.completed,
+            videos: Array.isArray(l.videos) ? l.videos : []
+          }))
+        }))
+      };
+      if (existingIdx >= 0) {
+        state.courses[existingIdx] = targetCourse;
+        save();
+        closeReceiveCourseModal();
+        navigate("courses");
+        notify(`Course "${targetCourse.name}" updated!`);
+        return;
+      }
+    }
+
+    state.courses.push(targetCourse);
+    save();
+    closeReceiveCourseModal();
+    navigate("courses");
+    notify(`Course "${targetCourse.name}" imported successfully!`);
+  }
+
+  function checkUrlHashActions() {
+    try {
+      const hash = window.location.hash;
+      if (hash && (hash.startsWith("#course_json=") || hash.startsWith("#import_course="))) {
+        const rawJson = decodeURIComponent(hash.replace(/^#(course_json|import_course)=/, ""));
+        if (rawJson) {
+          openReceiveCourseModal(rawJson);
+          window.location.hash = "";
+        }
+      }
+    } catch {}
+  }
+
   // Global Click Handlers
   document.addEventListener("click", e => {
     // Quick Create Button Toggle
@@ -3007,7 +4141,13 @@
       if (menu) menu.hidden = true;
       $("#quickCreateBtn")?.setAttribute("aria-expanded", "false");
       const act = qcItem.dataset.qcAction;
-      if (act === "course") {
+      if (act === "smart-add") {
+        openSmartAddModal();
+      } else if (act === "screenshot") {
+        openCaptureScreenshot();
+      } else if (act === "receive-course") {
+        openReceiveCourseModal();
+      } else if (act === "course") {
         navigate("courses");
         setTimeout(() => $("#courseName")?.focus(), 80);
       } else if (act === "video") {
@@ -3029,12 +4169,33 @@
     }
 
     // Click outside Quick Create Dropdown
-    if (!e.target.closest("#quickCreateDropdown")) {
+    if (!e.target.closest("#quickCreateDropdown, #quickCreateWrap")) {
       const menu = $("#quickCreateMenu");
       if (menu && !menu.hidden) {
         menu.hidden = true;
         $("#quickCreateBtn")?.setAttribute("aria-expanded", "false");
       }
+    }
+
+    // Course Share, Folders & Category Pills
+    const shareBtn = e.target.closest("[data-share-course]");
+    if (shareBtn) {
+      openShareCourseModal(shareBtn.dataset.shareCourse);
+      return;
+    }
+    const folderCourseBtn = e.target.closest("[data-course-folders]");
+    if (folderCourseBtn) {
+      openCourseFolders(folderCourseBtn.dataset.courseFolders);
+      return;
+    }
+    const catPill = e.target.closest("[data-pic-cat]");
+    if (catPill) {
+      const cat = catPill.dataset.picCat || "";
+      picFilterState.category = cat;
+      const catSel = $("#picCategoryFilter");
+      if (catSel) catSel.value = cat;
+      renderPictures();
+      return;
     }
 
     const n = e.target.closest("[data-page]"); if (n) { navigate(n.dataset.page); return; }
@@ -3328,6 +4489,15 @@
 
   // Keyboard navigation & accessibility
   document.addEventListener("keydown", e => {
+    // Ctrl+K / Cmd+K Universal Smart Add Shortcut
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+      e.preventDefault();
+      const smartModal = $("#smartAddModalOverlay");
+      if (smartModal && !smartModal.hidden) closeSmartAddModal();
+      else openSmartAddModal();
+      return;
+    }
+
     if (e.key === "Escape") {
       const qcMenu = $("#quickCreateMenu");
       if (qcMenu && !qcMenu.hidden) {
@@ -3335,6 +4505,10 @@
         $("#quickCreateBtn")?.setAttribute("aria-expanded", "false");
         return;
       }
+      if (!$("#smartAddModalOverlay")?.hidden) { closeSmartAddModal(); return; }
+      if (!$("#courseFolderModalOverlay")?.hidden) { $("#courseFolderModalOverlay").hidden = true; return; }
+      if (!$("#shareCourseModalOverlay")?.hidden) { closeShareCourseModal(); return; }
+      if (!$("#receiveCourseModalOverlay")?.hidden) { closeReceiveCourseModal(); return; }
       if (!$("#editCourseModalOverlay")?.hidden) { closeEditCourseModal(); return; }
       if (!$("#playlistVideoModalOverlay")?.hidden) { closePlaylistVideoModal(); return; }
       if (!$("#playlistPasteModalOverlay")?.hidden) { closePlaylistPasteModal(); return; }
@@ -3452,17 +4626,351 @@
     }
   });
 
+  // Smart Add Modal & Trigger Listeners
+  $("#navSmartAddBtn")?.addEventListener("click", () => openSmartAddModal());
+  $("#mgmtSmartAddBtn")?.addEventListener("click", () => openSmartAddModal());
+  $("#smartAddCloseBtn")?.addEventListener("click", closeSmartAddModal);
+  $("#smartAddModalOverlay")?.addEventListener("click", e => {
+    if (e.target === $("#smartAddModalOverlay")) closeSmartAddModal();
+  });
+  $("#smartAddInput")?.addEventListener("input", e => processSmartInput(e.target.value));
+  $("#smartAddClearBtn")?.addEventListener("click", resetSmartAdder);
+  $("#smartDetectForm")?.addEventListener("submit", handleSmartAddSubmit);
+
+  $("#smartAddPasteBtn")?.addEventListener("click", async () => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.read) {
+        const items = await navigator.clipboard.read();
+        for (const item of items) {
+          const imgType = item.types.find(t => t.startsWith("image/"));
+          if (imgType) {
+            const blob = await item.getType(imgType);
+            const imgInfo = await processImageFile(blob);
+            stagedSmartImage = imgInfo;
+            showSmartDetection("image", imgInfo);
+            notify("Pasted image from clipboard.");
+            return;
+          }
+        }
+      }
+      if (navigator.clipboard && navigator.clipboard.readText) {
+        const text = await navigator.clipboard.readText();
+        if (text) {
+          $("#smartAddInput").value = text;
+          processSmartInput(text);
+          notify("Pasted text from clipboard.");
+          return;
+        }
+      }
+      notify("Clipboard is empty or inaccessible. Press Ctrl+V directly into the input.");
+    } catch {
+      notify("Please press Ctrl+V directly to paste into this box.");
+    }
+  });
+
+  $("#smartAddCaptureBtn")?.addEventListener("click", async () => {
+    try {
+      notify("Select the window or screen tab to snapshot...");
+      const dataUrl = await captureScreenToDataUrl();
+      const img = new Image();
+      img.src = dataUrl;
+      await new Promise(res => { img.onload = () => res(); });
+      stagedSmartImage = {
+        dataUrl,
+        width: img.naturalWidth || img.width,
+        height: img.naturalHeight || img.height,
+        sizeBytes: Math.round((dataUrl.length * 3) / 4),
+        originalName: `snapshot-${Date.now()}.jpg`
+      };
+      showSmartDetection("image", stagedSmartImage);
+      notify("Snapshot captured into Smart Adder!");
+    } catch (err) {
+      if (err.name !== "NotAllowedError") notify(err.message || "Failed to capture snapshot.");
+    }
+  });
+
+  $("#smartAddFileInput")?.addEventListener("change", async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      if (file.type.startsWith("image/")) {
+        const imgInfo = await processImageFile(file);
+        stagedSmartImage = imgInfo;
+        showSmartDetection("image", imgInfo);
+      } else if (file.type === "application/pdf" || file.name.endsWith(".pdf")) {
+        const dataUrl = await readFileAsDataURL(file);
+        showSmartDetection("pdf", { url: "", dataUrl, fileName: file.name, fileSize: file.size });
+      } else if (file.name.endsWith(".json") || file.type.includes("json")) {
+        const text = await file.text();
+        $("#smartAddInput").value = text;
+        processSmartInput(text);
+      } else {
+        const text = await file.text();
+        $("#smartAddInput").value = text;
+        processSmartInput(text);
+      }
+    } catch (err) {
+      notify(err.message || "Could not read chosen file.");
+    } finally {
+      e.target.value = "";
+    }
+  });
+
+  // Screenshot Action Buttons
+  $("#openCaptureScreenshotBtn")?.addEventListener("click", () => openCaptureScreenshot());
+  $("#modalCaptureScreenBtn")?.addEventListener("click", async () => {
+    try {
+      const dataUrl = await captureScreenToDataUrl();
+      const img = new Image();
+      img.src = dataUrl;
+      await new Promise(res => { img.onload = () => res(); });
+      setStagedImage({
+        dataUrl,
+        width: img.naturalWidth || img.width,
+        height: img.naturalHeight || img.height,
+        sizeBytes: Math.round((dataUrl.length * 3) / 4),
+        originalName: `screenshot-${Date.now()}.jpg`
+      });
+      const cat = $("#picCategoryInput");
+      if (cat) cat.value = "Screenshot";
+      notify("Screen captured! You can now edit details and save.");
+    } catch (err) {
+      if (err.name !== "NotAllowedError") notify(err.message || "Screen capture cancelled.");
+    }
+  });
+
+  $("#playerScreenshotBtn")?.addEventListener("click", async () => {
+    const c = state.courses.find(x => x.id === currentCourseId);
+    const l = c && lessons(c).find(x => x.id === currentLessonId);
+    const elapsed = timerRunning ? timerElapsedBeforeStart + (Date.now() - timerStartedAt) : timerElapsedBeforeStart;
+    const timeStr = fmtTime(elapsed);
+    const lessonTitle = l ? l.title : "Lesson";
+    const title = c ? `${c.name} - ${lessonTitle} (${timeStr})` : `Study Screenshot (${timeStr})`;
+    try {
+      notify("Select study window or tab to capture...");
+      const dataUrl = await captureScreenToDataUrl();
+      const img = new Image();
+      img.src = dataUrl;
+      await new Promise(res => { img.onload = () => res(); });
+      const imgInfo = {
+        dataUrl,
+        width: img.naturalWidth || img.width,
+        height: img.naturalHeight || img.height,
+        sizeBytes: Math.round((dataUrl.length * 3) / 4),
+        originalName: `${title}.jpg`
+      };
+      await saveDirectScreenshot(imgInfo, currentCourseId, "Lecture Screenshots");
+    } catch (err) {
+      if (err.name !== "NotAllowedError" && err.name !== "AbortError") {
+        notify("Capture cancelled: " + err.message);
+      }
+    }
+  });
+
+  $("#playerCoursePicsBtn")?.addEventListener("click", () => {
+    openCourseFolders(currentCourseId);
+  });
+
+  // Course Screenshot Folders Listeners
+  $("#courseFolderSelect")?.addEventListener("change", e => {
+    picFilterState.courseId = e.target.value;
+    picFilterState.folder = "";
+    renderPictures();
+  });
+
+  $("#folderPillsList")?.addEventListener("click", e => {
+    const pill = e.target.closest(".folder-pill");
+    if (!pill) return;
+    picFilterState.folder = pill.dataset.folder !== undefined ? pill.dataset.folder : "";
+    renderPictures();
+  });
+
+  // Direct Drag & Drop into Folder Zone
+  const folderDropzone = $("#folderDirectDropzone");
+  if (folderDropzone) {
+    ["dragenter", "dragover"].forEach(evt => {
+      folderDropzone.addEventListener(evt, e => {
+        e.preventDefault();
+        e.stopPropagation();
+        folderDropzone.classList.add("dragover");
+      });
+    });
+    ["dragleave", "drop"].forEach(evt => {
+      folderDropzone.addEventListener(evt, e => {
+        e.preventDefault();
+        e.stopPropagation();
+        folderDropzone.classList.remove("dragover");
+      });
+    });
+    folderDropzone.addEventListener("drop", async e => {
+      const files = Array.from(e.dataTransfer?.files || []).filter(f => f.type.startsWith("image/"));
+      if (files.length === 0) return;
+      for (const f of files) {
+        try {
+          const info = await processImageFile(f);
+          await saveDirectScreenshot(info, picFilterState.courseId, picFilterState.folder);
+        } catch (err) {
+          notify(`Failed to process ${f.name}: ${err.message}`);
+        }
+      }
+    });
+  }
+
+  $("#folderDirectFileInput")?.addEventListener("change", async e => {
+    const files = Array.from(e.target.files || []).filter(f => f.type.startsWith("image/"));
+    if (files.length === 0) return;
+    for (const f of files) {
+      try {
+        const info = await processImageFile(f);
+        await saveDirectScreenshot(info, picFilterState.courseId, picFilterState.folder);
+      } catch (err) {
+        notify(`Failed to process ${f.name}: ${err.message}`);
+      }
+    }
+    e.target.value = "";
+  });
+
+  $("#folderDirectSnapBtn")?.addEventListener("click", () => {
+    directCaptureScreenshot(picFilterState.courseId, picFilterState.folder);
+  });
+
+  $("#folderDirectPasteBtn")?.addEventListener("click", async () => {
+    try {
+      if (navigator.clipboard?.read) {
+        const items = await navigator.clipboard.read();
+        for (const item of items) {
+          const imageType = item.types.find(t => t.startsWith("image/"));
+          if (imageType) {
+            const blob = await item.getType(imageType);
+            const info = await processImageFile(blob);
+            await saveDirectScreenshot(info, picFilterState.courseId, picFilterState.folder);
+            return;
+          }
+        }
+      }
+      notify("Press Ctrl+V to paste screenshot directly into this folder.");
+    } catch {
+      notify("Press Ctrl+V to paste screenshot directly into this folder.");
+    }
+  });
+
+  // Folder Modal (Create & Rename)
+  const openFolderModal = (courseId = "", oldName = "") => {
+    updatePicCourseOptions();
+    if ($("#courseFolderTargetSelect")) {
+      $("#courseFolderTargetSelect").value = courseId || picFilterState.courseId || (state.courses[0] ? state.courses[0].id : "");
+    }
+    if ($("#courseFolderOldName")) $("#courseFolderOldName").value = oldName || "";
+    if ($("#courseFolderModalTitle")) {
+      $("#courseFolderModalTitle").textContent = oldName ? `Rename Folder "${oldName}"` : "Create Screenshot Folder";
+    }
+    if ($("#courseFolderNameInput")) {
+      $("#courseFolderNameInput").value = oldName || "";
+      setTimeout(() => $("#courseFolderNameInput").focus(), 60);
+    }
+    $("#courseFolderModalOverlay").hidden = false;
+  };
+
+  const closeFolderModal = () => {
+    const overlay = $("#courseFolderModalOverlay");
+    if (overlay) overlay.hidden = true;
+    if (typeof $("#courseFolderForm")?.reset === "function") $("#courseFolderForm").reset();
+  };
+
+  $("#createCourseFolderBtn")?.addEventListener("click", () => {
+    openFolderModal(picFilterState.courseId || "");
+  });
+
+  $("#folderRenameBtn")?.addEventListener("click", () => {
+    if (picFilterState.courseId && picFilterState.folder) {
+      openFolderModal(picFilterState.courseId, picFilterState.folder);
+    }
+  });
+
+  $("#folderDeleteBtn")?.addEventListener("click", () => {
+    if (picFilterState.courseId && picFilterState.folder) {
+      if (confirm(`Are you sure you want to delete folder "${picFilterState.folder}"? Screenshots in it will be moved to "General".`)) {
+        deleteCourseFolder(picFilterState.courseId, picFilterState.folder);
+      }
+    }
+  });
+
+  $("#courseFolderModalClose")?.addEventListener("click", closeFolderModal);
+  $("#courseFolderCancelBtn")?.addEventListener("click", closeFolderModal);
+  $("#courseFolderModalOverlay")?.addEventListener("click", e => {
+    if (e.target === $("#courseFolderModalOverlay")) closeFolderModal();
+  });
+
+  $("#courseFolderForm")?.addEventListener("submit", e => {
+    e.preventDefault();
+    const targetCourse = $("#courseFolderTargetSelect")?.value;
+    const folderName = $("#courseFolderNameInput")?.value.trim();
+    const oldName = $("#courseFolderOldName")?.value.trim();
+    if (!targetCourse || !folderName) return;
+    if (oldName) {
+      renameCourseFolder(targetCourse, oldName, folderName);
+    } else {
+      createCourseFolder(targetCourse, folderName);
+    }
+    closeFolderModal();
+  });
+
+  $("#picCourseSelect")?.addEventListener("change", () => {
+    updatePicFolderDatalist();
+  });
+
+  // Share Course Modal Listeners
+  $("#shareCourseCloseBtn")?.addEventListener("click", closeShareCourseModal);
+  $("#shareCourseModalOverlay")?.addEventListener("click", e => {
+    if (e.target === $("#shareCourseModalOverlay")) closeShareCourseModal();
+  });
+  $("#copyCourseJsonBtn")?.addEventListener("click", handleCopyShareJson);
+  $("#downloadCourseJsonBtn")?.addEventListener("click", handleDownloadShareJson);
+  $("#copyCourseShareUrlBtn")?.addEventListener("click", handleCopyShareUrl);
+
+  // Receive Course Modal Listeners
+  $("#mgmtReceiveCourseBtn")?.addEventListener("click", () => openReceiveCourseModal());
+  $("#receiveCourseCloseBtn")?.addEventListener("click", closeReceiveCourseModal);
+  $("#receiveCancelBtn")?.addEventListener("click", closeReceiveCourseModal);
+  $("#receiveCourseModalOverlay")?.addEventListener("click", e => {
+    if (e.target === $("#receiveCourseModalOverlay")) closeReceiveCourseModal();
+  });
+  $("#receiveCourseInput")?.addEventListener("input", e => validateReceiveCourseJson(e.target.value));
+  $("#receiveClearBtn")?.addEventListener("click", () => {
+    $("#receiveCourseInput").value = "";
+    validateReceiveCourseJson("");
+  });
+  $("#receiveConfirmBtn")?.addEventListener("click", handleImportReceivedCourse);
+
+  $("#receiveFileInput")?.addEventListener("change", async e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    try {
+      const text = await f.text();
+      $("#receiveCourseInput").value = text;
+      validateReceiveCourseJson(text);
+    } catch {
+      notify("Failed to read JSON file.");
+    } finally {
+      e.target.value = "";
+    }
+  });
+
   // Initialize Theme Mode, Theme Color, and load DB
   applyThemeMode(currentThemeMode, false);
   applyTheme(currentTheme, false);
+
+  window.addEventListener("hashchange", checkUrlHashActions);
 
   Promise.all([PicDB.getAll(), DocDB.getAll()]).then(([pics, docs]) => {
     picturesList = Array.isArray(pics) ? pics : [];
     docsList = Array.isArray(docs) ? docs : [];
     renderAll();
     renderTimer();
+    checkUrlHashActions();
   }).catch(() => {
     renderAll();
     renderTimer();
+    checkUrlHashActions();
   });
 })();

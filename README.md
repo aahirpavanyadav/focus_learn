@@ -38,15 +38,51 @@ Store, edit, save, view, and delete both PDF documents and created study notes d
 - **Search & Filters**: Search across all notes and PDFs by title, content, or details; filter by course, category, or document type.
 - **Player Integration**: Click **✎ Notes & PDFs** inside the video lesson player to view or create materials linked to the current course.
 
-### 3. Pictures & Visual Notes (Visual Study Vault)
-- **Save Pictures**: Upload diagrams, formula sheets, whiteboard captures, screenshots, and handwritten notes.
-- **Clipboard Paste**: Press `Ctrl+V` (`Cmd+V`) anywhere to paste an image directly from your clipboard into your library.
-- **Automatic Optimization**: Client-side canvas downscaling for oversized photos to prevent storage bloat.
-- **Edit Pictures & Details**: Edit title, category, course association, and notes; rotate images 90° clockwise; replace images.
-- **Fullscreen Lightbox**: View full-resolution images with zoom toggle and details sidebar.
+### 4. Screenshot Capture, Course Screenshot Folders & Visual Study Vault
+- **Course Screenshot Folders**:
+  - Organize screenshots directly inside courses using custom folders (e.g. `Lecture Slides`, `DSA Diagrams`, `Code Snippets`, `Formulas`, `General`).
+  - Create new folders inside any course via **＋ New Folder** or inline folder modal.
+  - Rename or delete custom folders anytime (deleting a folder safely migrates its screenshots back to `General`).
+  - Each course card in Course Management displays a direct **📂 Screenshots & Folders (N)** button that opens that course's screenshot workspace.
+- **Zero-Prompt Direct Paste & Drag-and-Drop (Instant Save)**:
+  - Open any folder inside a course to enter the **Direct Instant Save Zone**.
+  - **Direct Paste (`Ctrl+V`)**: Press `Ctrl+V` anywhere to paste clipboard screenshots directly into the active course folder without any modal popping up or asking for title/details.
+  - **Direct Drag & Drop**: Drop single or multiple image files directly onto the folder dropzone — all images save instantly into the selected folder with zero forms or prompts.
+  - **Direct Screen Snapshot**: Click **📸 Snap Screen Direct** (or **📸 Snapshot** in the video player) to capture your screen and save directly to the course folder without interruptions.
+- **Add / Edit Details Later**:
+  - Add or modify picture details whenever you want: click **Edit** on any screenshot card to customize its Title, Folder assignment, Category, Tags, Linked Course, and Study Notes & Details.
+- **Comprehensive Categorization & Tags**:
+  - Categorize visual study artifacts: `Screenshot`, `Code Screenshot`, `Lecture Slide`, `Diagram`, `Formula`, `Whiteboard`, `Mindmap`, `Cheatsheet`, or `Other`.
+  - Add custom space- or comma-separated tags (e.g. `#dsa #tree #binarysearch`) for granular multi-tag retrieval.
+  - Category filter pills (`📸 Screenshots`, `💻 Code`, `📝 Slides`, `📊 Diagrams`, `📐 Formulas`, `📋 Whiteboard`) in the Pictures Vault for 1-click filtering.
+- **Fullscreen Lightbox**: View full-resolution images with category badges, folder badge, tag pills, zoom toggle, and details sidebar.
 - **Download & Delete**: Save picture files locally or remove them with confirmation.
 
-### 4. Courses, Multi-Course Smart Management & YouTube Playlists
+### 5. Universal Smart Adder (`Ctrl+K` / `⌘K`)
+- **One Universal Intake for All Study Content**:
+  - Accessible from anywhere by pressing `Ctrl+K` / `⌘K`, clicking **⚡ Smart Add** in the navbar, or choosing it in Course Management or Quick Create.
+  - Simply paste a link, drop a file, or type text — the auto-detection engine instantaneously recognizes the content type:
+    - **📺 Single YouTube Video**: Auto-extracts video ID and displays live thumbnail preview.
+    - **📑 YouTube Playlist**: Auto-extracts playlist ID and offers 1-click import into a course module.
+    - **📸 Screenshot / Image**: Instant paste or capture with image preview, dimensions, and category assignment.
+    - **📝 Study Note**: Auto-detects multi-line text and markdown headings, generating a structured study note with target course linking.
+    - **📄 PDF Document**: Drag-and-drop or file upload with auto-detection of PDF documents.
+    - **📦 FocusLearn Course Package**: Detects shared course JSON packages and routes directly to course import.
+- **1-Click Add & Inline Course Creation**: Select an existing course or choose `＋ Create new course...` directly inside the Smart Adder modal.
+
+### 6. Course Sharing & Receiving (JSON & Peer-to-Peer URL)
+- **Share Courses via JSON**:
+  - Click **↗ Share** on any course card in Course Management to open the Course Share Hub.
+  - **Copy JSON**: Copies the clean, portable JSON package (`FocusLearn_Course`) to clipboard.
+  - **Download JSON**: Generates a downloadable `FocusLearn-Course-[Name].json` file containing all course modules, lessons, and playlist entries.
+  - **Shareable URL Hash**: Generates a shareable URL containing the encoded course package (`#course_json=...`). Opening this link on any device automatically opens the Receive Course dialog with the course pre-loaded!
+- **Receive Courses via JSON**:
+  - Click **📥 Receive Course** in Course Management (or in Quick Create).
+  - Paste course JSON text or drop a `.json` file.
+  - **Interactive Real-Time Preview**: Displays course title, category, theme color, module count, lesson list, and validation status before importing.
+  - **Smart Conflict Handling**: Choose to **Import as new course** (generates fresh unique IDs, preserving your existing courses) or **Update existing course** if you are updating a shared syllabus.
+
+### 7. Courses, Multi-Course Smart Management & YouTube Playlists
 - Group lessons and playlists into customizable courses and organized modules.
 - **Smart Multi-Course Management (for managing dozens of courses)**:
   - **Live Search**: Instant real-time search across Course Titles, Categories, Descriptions, Module names, Lesson titles, and Playlist contents.
@@ -85,11 +121,11 @@ Store, edit, save, view, and delete both PDF documents and created study notes d
   - Mark lessons and playlists complete/incomplete; automatically remembers last watched position.
   - Distraction-free theatre mode, quick module drawer, and direct links to linked notes, PDFs, and visual diagrams.
 
-### 5. Learning Analytics
+### 8. Learning Analytics
 - Tracked study time, active days, streak, and 7-day consistency chart
 - Manual study timer in the lesson player with browser tab visibility detection
 
-### 6. Settings, Dark & White Themes, UI/UX Combos & Portability
+### 9. Settings, Dark & White Themes, UI/UX Combos & Portability
 - **Dark and White / Light Mode Engine**:
   - Seamless 1-click **☀️ White Theme / 🌙 Dark Theme toggle** in the Topbar header and in Settings.
   - **White / Light Theme**: Pure white studio canvas, crisp slate typography, gentle card elevations, high-contrast borders, and clean readability for bright daylight.
