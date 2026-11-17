@@ -7,18 +7,40 @@ Open `index.html` in any modern web browser. No build step, framework, Node.js s
 
 ## Features
 
-### 1. Smart Instagram-Style Navbar & Mobile Bar
-FocusLearn features a clean, modern navigation architecture inspired by Instagram:
-- **Clean Desktop Topbar with Frosted Glassmorphism**:
-  - Replaced the fixed side navbar with an ultra-clean, sticky top navigation bar featuring background blur (`backdrop-filter: blur(20px)`), brand mark, pill tab links, live study indicators, and dynamic badge counters.
-  - Generates significant horizontal breathing room for the multi-course management view, responsive course cards, video player, and document vaults.
+### 1. Smart Manage Navbar System & Instagram-Style Navigation
+FocusLearn features a comprehensive, modern navigation and course management architecture:
+- **Global Topbar Smart Course Switcher & Management Hub**:
+  - **Quick Course Switcher Pill**: Right in the sticky top navbar, view your active course name, live course count badge, and a one-click dropdown menu.
+  - **Smart Manage Popover**:
+    - Instant course switcher: click any course to immediately jump into it or resume playback.
+    - Live course search: instantly filter and find courses from any page in the app.
+    - Mini 1-click action buttons on each course card: **▶ Study**, **📂 Pics** (screenshots), **✎ Notes** (notes & PDFs), **📅 GCal** (schedule study block), and **✏️ Edit**.
+    - Quick actions footer: **＋ New Course**, **✨ Smart Add (⌘K)**, and **📂 View All Courses**.
   - **Insta-Inspired ＋ Create Button & Quick Menu**:
-    - Tap **＋ Create** to reveal a quick dropdown menu to instantaneously scaffold a **New Course**, add a **Single Video Lesson**, add a **YouTube Playlist**, upload a **Picture**, write a **Formatted Note**, or import a **PDF Document**.
+    - Instant dropdown menu to scaffold a **New Course**, add a **Single Video Lesson**, add a **YouTube Playlist**, upload a **Picture**, write a **Formatted Note**, import a **PDF Document**, access **Google Calendar**, or open **DayFlows Planner**.
     - Fully accessible with keyboard navigation (`Escape` closes menu) and click-outside dismissal.
   - **Quick Theme Mode Switcher**: Instant 1-click toggle between Dark Mode and White / Light Mode right in the navbar.
   - **Settings & Profile Pill**: Fast access to appearance settings, color combos, and local storage status.
+- **Dedicated Sticky Smart Manage Navbar in Course Management**:
+  - **Sticky Control Center**: Floats at the top of Course Management with background blur for effortless navigation across dozens of courses.
+  - **Drawer Toggle**: Smoothly expands or collapses the Course & Content Creation forms with **＋ Create / Add Content**, keeping your screen focused on your course library.
+  - **Category Pills Carousel**: Horizontally scrollable category filter pills (`All`, `Programming`, `Design`, `Academics`, etc.) with real-time course counts.
+  - **3 View Modes**:
+    1. **≣ Detailed Accordion**: Full modules and lessons breakdown with expandable playlists.
+    2. **⊞ Compact Cards Grid**: Clean card grid with progress rings, category badges, and quick action icons.
+    3. **☰ Dense List View**: High-density table list layout ideal for managing 10+ to 50+ courses at a glance.
+  - **Real-Time Search & Bulk Expand/Collapse**: Instant search across titles, modules, lessons, and playlists with one-click **▼ Expand all** and **▲ Collapse all**.
+- **Smart Navbar Customizer in Settings**:
+  - In Settings, customize exactly which shortcuts and modules appear in your top navigation bar:
+    - Toggle `Smart Course Switcher & Manager`
+    - Toggle `Pictures Vault`
+    - Toggle `Notes & PDFs`
+    - Toggle `Schedule & Flow`
+    - Toggle `Analytics`
+    - Toggle `Quick Calendar Button`
+  - Preferences persist in `localStorage` and update the navbar dynamically without page reloads.
 - **Instagram-Style Mobile Bottom Bar**:
-  - Thumb-friendly fixed bottom bar on mobile screens (< 760px) with 6 iconic navigation tabs: `Home`, `Courses`, `Study`, `Pictures`, `Notes`, and `Settings`.
+  - Thumb-friendly fixed bottom bar on mobile screens (< 760px) with iconic navigation tabs: `Home`, `Courses`, `Study`, `Pictures`, `Notes`, `Schedule`, and `Settings`.
   - Floating, non-intrusive layout optimized for one-handed mobile navigation.
 
 ### 2. Notes & PDF Library (Document Vault)

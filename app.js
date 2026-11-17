@@ -811,13 +811,17 @@
 
     const totalCourses = state.courses.length;
     const ccl = $("#courseCountLabel"); if (ccl) ccl.textContent = `${totalCourses} course${totalCourses === 1 ? "" : "s"}`;
+    const smnTotal = $("#smnTotalCourses"); if (smnTotal) smnTotal.textContent = totalCourses;
     const me = $("#managementEmpty"); if (me) me.hidden = totalCourses > 0;
 
     const mgmtBar = $("#mgmtControlsBar");
     if (mgmtBar) mgmtBar.hidden = totalCourses === 0;
 
+    const mc = $("#managementCourses");
+    if (mc) mc.className = `management-courses view-${currentCourseViewMode}`;
+
     if (totalCourses === 0) {
-      const mc = $("#managementCourses"); if (mc) mc.innerHTML = "";
+      if (mc) mc.innerHTML = "";
       return;
     }
 
@@ -830,6 +834,20 @@
     if (catSel) {
       const curCat = mgmtFilterState.category;
       catSel.innerHTML = '<option value="">All categories</option>' + allCats.map(cat => `<option value="${cat}" ${curCat === cat ? "selected" : ""}>${esc(cat)}</option>`).join("");
+    }
+
+    // Populate Category Carousel Strip in Smart Manage Navbar
+    const catStrip = $("#smnCategoriesStrip");
+    if (catStrip) {
+      const activeCat = mgmtFilterState.category || "";
+      const uniqueCats = Array.from(new Set(state.courses.map(c => c.category || "General"))).sort();
+      catStrip.innerHTML = `
+        <button type="button" class="smn-cat-pill ${!activeCat ? "active" : ""}" data-mgmt-cat="">All (${totalCourses})</button>
+        ${uniqueCats.map(cat => {
+          const count = state.courses.filter(c => (c.category || "General") === cat).length;
+          return `<button type="button" class="smn-cat-pill ${activeCat === cat ? "active" : ""}" data-mgmt-cat="${esc(cat)}">${esc(cat)} (${count})</button>`;
+        }).join("")}
+      `;
     }
 
     // Calculate overview statistics
@@ -1996,6 +2014,7 @@
     renderDocuments();
     renderThemeCards();
     updateNavBadges();
+    updateNavManageMenu();
     if($("#page-schedule")?.classList.contains("active"))renderSchedulePage();
     if($("#page-analytics")?.classList.contains("active"))renderAnalytics();
   }
@@ -2013,6 +2032,7 @@
     const l=lessons(c).find(x=>x.id===lid);if(!l)return;
     if(timerRunning)stopTimer(true);
     currentLessonId=lid;c.lastWatched=lid;persist();
+    updateNavManageMenu();
 
     const isPl = !!(l.isPlaylist || l.playlistId);
     $("#playerCourseLabel").textContent=c.name;
@@ -2568,6 +2588,8 @@
     });
     $("#courseForm").reset();
     save();
+    toggleCreatorDrawer(false);
+    updateNavManageMenu();
     notify("Course created.");
   });
 
@@ -4157,13 +4179,16 @@
         openReceiveCourseModal();
       } else if (act === "course") {
         navigate("courses");
+        toggleCreatorDrawer(true);
         setTimeout(() => $("#courseName")?.focus(), 80);
       } else if (act === "video") {
         navigate("courses");
+        toggleCreatorDrawer(true);
         switchAddMode("video");
         setTimeout(() => $("#videoUrl")?.focus(), 80);
       } else if (act === "playlist") {
         navigate("courses");
+        toggleCreatorDrawer(true);
         switchAddMode("playlist");
         setTimeout(() => $("#playlistUrl")?.focus(), 80);
       } else if (act === "picture") {
@@ -4187,6 +4212,15 @@
       if (menu && !menu.hidden) {
         menu.hidden = true;
         $("#quickCreateBtn")?.setAttribute("aria-expanded", "false");
+      }
+    }
+
+    // Click outside Nav Manage Popover
+    if (!e.target.closest("#navManageWrap")) {
+      const pop = $("#navManagePopover");
+      if (pop && !pop.hidden) {
+        pop.hidden = true;
+        $("#navManageBtn")?.setAttribute("aria-expanded", "false");
       }
     }
 
@@ -4529,6 +4563,12 @@
       if (qcMenu && !qcMenu.hidden) {
         qcMenu.hidden = true;
         $("#quickCreateBtn")?.setAttribute("aria-expanded", "false");
+        return;
+      }
+      const navManagePop = $("#navManagePopover");
+      if (navManagePop && !navManagePop.hidden) {
+        navManagePop.hidden = true;
+        $("#navManageBtn")?.setAttribute("aria-expanded", "false");
         return;
       }
       if (!$("#calendarModalOverlay")?.hidden) { closeCalendarModal(); return; }
@@ -5242,7 +5282,339 @@
     openCalendarModal(currentCourseId, title);
   });
 
+  // ============================================================
+  // SMART MANAGE NAVBAR SYSTEM
+  // ============================================================
+  let navManageSearchQuery = "";
+  let currentCourseViewMode = "accordion";
+  try {
+    const savedView = localStorage.getItem("focuslearn.course_view");
+    if (savedView && ["accordion", "compact", "list"].includes(savedView)) {
+      currentCourseViewMode = savedView;
+    }
+  } catch {}
+
+  const DEFAULT_NAVBAR_PREFS = {
+    manage: true,
+    pics: true,
+    docs: true,
+    schedule: true,
+    analytics: true,
+    calendar: true
+  };
+  let navbarPrefs = { ...DEFAULT_NAVBAR_PREFS };
+
+  function loadNavbarPrefs() {
+    try {
+      const saved = localStorage.getItem("focuslearn.navbar_prefs");
+      if (saved) {
+        navbarPrefs = { ...DEFAULT_NAVBAR_PREFS, ...JSON.parse(saved) };
+      }
+    } catch {}
+    applyNavbarPrefs();
+  }
+
+  function saveNavbarPrefs() {
+    try {
+      localStorage.setItem("focuslearn.navbar_prefs", JSON.stringify(navbarPrefs));
+    } catch {}
+    applyNavbarPrefs();
+  }
+
+  function applyNavbarPrefs() {
+    const wrapManage = $("#navManageWrap");
+    if (wrapManage) wrapManage.hidden = !navbarPrefs.manage;
+
+    const linkPics = $("#navLinkPictures");
+    if (linkPics) linkPics.hidden = !navbarPrefs.pics;
+    const mobPics = $(`#mobileInstaBar [data-page="pictures"]`);
+    if (mobPics) mobPics.hidden = !navbarPrefs.pics;
+
+    const linkDocs = $("#navLinkNotes");
+    if (linkDocs) linkDocs.hidden = !navbarPrefs.docs;
+    const mobDocs = $(`#mobileInstaBar [data-page="notes"]`);
+    if (mobDocs) mobDocs.hidden = !navbarPrefs.docs;
+
+    const linkSched = $("#navLinkSchedule");
+    if (linkSched) linkSched.hidden = !navbarPrefs.schedule;
+    const mobSched = $(`#mobileInstaBar [data-page="schedule"]`);
+    if (mobSched) mobSched.hidden = !navbarPrefs.schedule;
+
+    const linkAnalytics = $("#navLinkAnalytics");
+    if (linkAnalytics) linkAnalytics.hidden = !navbarPrefs.analytics;
+
+    const navCal = $("#navCalendarBtn");
+    if (navCal) navCal.hidden = !navbarPrefs.calendar;
+
+    // Synchronize checkboxes in Settings if present
+    const pManage = $("#prefNavManage"); if (pManage) pManage.checked = !!navbarPrefs.manage;
+    const pPics = $("#prefNavPics"); if (pPics) pPics.checked = !!navbarPrefs.pics;
+    const pDocs = $("#prefNavDocs"); if (pDocs) pDocs.checked = !!navbarPrefs.docs;
+    const pSched = $("#prefNavSchedule"); if (pSched) pSched.checked = !!navbarPrefs.schedule;
+    const pAna = $("#prefNavAnalytics"); if (pAna) pAna.checked = !!navbarPrefs.analytics;
+    const pCal = $("#prefNavCalendar"); if (pCal) pCal.checked = !!navbarPrefs.calendar;
+  }
+
+  function switchCourseViewMode(mode) {
+    if (!["accordion", "compact", "list"].includes(mode)) mode = "accordion";
+    currentCourseViewMode = mode;
+    try { localStorage.setItem("focuslearn.course_view", mode); } catch {}
+    $$("#smnViewSwitcher .smn-view-btn").forEach(btn => {
+      btn.classList.toggle("active", btn.dataset.viewMode === mode);
+    });
+    const mc = $("#managementCourses");
+    if (mc) {
+      mc.className = `management-courses view-${mode}`;
+    }
+  }
+
+  function toggleCreatorDrawer(forceOpen = null) {
+    const drawer = $("#smnCreatorDrawer");
+    if (!drawer) return;
+    const shouldOpen = forceOpen !== null ? forceOpen : drawer.hidden;
+    drawer.hidden = !shouldOpen;
+    const toggleBtn = $("#smnTabAddToggle");
+    const tabLibrary = $("#smnTabLibrary");
+    const icon = $("#smnTabAddIcon");
+    const text = $("#smnTabAddText");
+
+    if (toggleBtn) toggleBtn.classList.toggle("active", shouldOpen);
+    if (tabLibrary) tabLibrary.classList.toggle("active", !shouldOpen);
+    if (icon) icon.textContent = shouldOpen ? "✕" : "＋";
+    if (text) text.textContent = shouldOpen ? "Close Form" : "Create / Add Content";
+
+    if (shouldOpen) {
+      setTimeout(() => $("#courseName")?.focus(), 80);
+    }
+  }
+
+  function updateNavManageMenu() {
+    const total = state.courses.length;
+    const badge = $("#navManageBadge");
+    if (badge) {
+      badge.textContent = total;
+      badge.hidden = total === 0;
+    }
+    const label = $("#navManageLabel");
+    if (label) {
+      if (currentCourseId) {
+        const activeCourse = state.courses.find(c => c.id === currentCourseId);
+        if (activeCourse) {
+          label.textContent = activeCourse.name.length > 18 ? `${activeCourse.name.slice(0, 16)}...` : activeCourse.name;
+        } else {
+          label.textContent = "Manage Courses";
+        }
+      } else {
+        label.textContent = total > 0 ? `Courses (${total})` : "Manage Courses";
+      }
+    }
+    const countBadge = $("#nmpCourseCount");
+    if (countBadge) countBadge.textContent = `${total} course${total === 1 ? "" : "s"}`;
+
+    const listEl = $("#nmpCourseList");
+    if (!listEl) return;
+
+    if (total === 0) {
+      listEl.innerHTML = `
+        <div style="text-align:center;padding:24px 12px;color:var(--muted)">
+          <div style="font-size:24px;margin-bottom:6px">📚</div>
+          <strong style="display:block;font-size:12px;color:var(--text);margin-bottom:4px">No courses yet</strong>
+          <small style="font-size:11px">Create or import your first course to manage it here.</small>
+        </div>
+      `;
+      return;
+    }
+
+    let coursesToRender = state.courses;
+    if (navManageSearchQuery) {
+      const q = navManageSearchQuery.toLowerCase();
+      coursesToRender = state.courses.filter(c => 
+        (c.name || "").toLowerCase().includes(q) || 
+        (c.category || "").toLowerCase().includes(q)
+      );
+    }
+
+    if (coursesToRender.length === 0) {
+      listEl.innerHTML = `
+        <div style="text-align:center;padding:16px 10px;color:var(--muted);font-size:11px">
+          No courses matching "${esc(navManageSearchQuery)}"
+        </div>
+      `;
+      return;
+    }
+
+    listEl.innerHTML = coursesToRender.map(c => {
+      const s = stats(c);
+      const isActive = c.id === currentCourseId;
+      return `
+        <div class="nmp-course-item ${isActive ? "active" : ""}">
+          <div class="nmp-course-title-row">
+            <strong data-nav-open-course="${c.id}" title="Open ${esc(c.name)}">${isActive ? "▶ " : ""}${esc(c.name)}</strong>
+            <span class="nmp-course-cat">${esc(c.category || "General")}</span>
+          </div>
+          <div class="nmp-course-meta">
+            <span>${s.total} lesson${s.total === 1 ? "" : "s"} (${s.done} done)</span>
+            <strong>${s.pct}%</strong>
+          </div>
+          <div class="nmp-progress-track">
+            <div class="nmp-progress-bar" style="width:${s.pct}%"></div>
+          </div>
+          <div class="nmp-course-actions">
+            <button type="button" class="nmp-action-mini" data-nmp-study="${c.id}" title="Study course in Learning Space">▶ Study</button>
+            <button type="button" class="nmp-action-mini" data-nmp-pics="${c.id}" title="Screenshot Folders">📂 Pics</button>
+            <button type="button" class="nmp-action-mini" data-nmp-notes="${c.id}" title="Notes & PDFs">✎ Notes</button>
+            <button type="button" class="nmp-action-mini" data-nmp-cal="${c.id}" title="Schedule study in Google Calendar">📅 GCal</button>
+            <button type="button" class="nmp-action-mini" data-nmp-edit="${c.id}" title="Edit course details">✏️ Edit</button>
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  // Top Navbar Manage Pill Listeners
+  $("#navManageBtn")?.addEventListener("click", e => {
+    if (typeof e.stopPropagation === "function") e.stopPropagation();
+    const pop = $("#navManagePopover");
+    if (!pop) return;
+    const willOpen = pop.hidden;
+    pop.hidden = !willOpen;
+    $("#navManageBtn")?.setAttribute("aria-expanded", String(willOpen));
+    if (willOpen) {
+      updateNavManageMenu();
+      const sInp = $("#nmpCourseSearch");
+      if (sInp) {
+        sInp.value = navManageSearchQuery;
+        setTimeout(() => sInp.focus(), 60);
+      }
+    }
+  });
+
+  $("#nmpCourseSearch")?.addEventListener("input", e => {
+    navManageSearchQuery = e.target.value.trim();
+    updateNavManageMenu();
+  });
+
+  $("#nmpNewCourseBtn")?.addEventListener("click", () => {
+    const pop = $("#navManagePopover"); if (pop) pop.hidden = true;
+    $("#navManageBtn")?.setAttribute("aria-expanded", "false");
+    navigate("courses");
+    toggleCreatorDrawer(true);
+  });
+
+  $("#nmpSmartAddBtn")?.addEventListener("click", () => {
+    const pop = $("#navManagePopover"); if (pop) pop.hidden = true;
+    $("#navManageBtn")?.setAttribute("aria-expanded", "false");
+    openSmartAddModal();
+  });
+
+  $("#nmpManageAllBtn")?.addEventListener("click", () => {
+    const pop = $("#navManagePopover"); if (pop) pop.hidden = true;
+    $("#navManageBtn")?.setAttribute("aria-expanded", "false");
+    navigate("courses");
+  });
+
+  $("#navManagePopover")?.addEventListener("click", e => {
+    const studyBtn = e.target.closest("[data-nmp-study], [data-nav-open-course]");
+    if (studyBtn) {
+      const cid = studyBtn.dataset.nmpStudy || studyBtn.dataset.navOpenCourse;
+      const pop = $("#navManagePopover"); if (pop) pop.hidden = true;
+      $("#navManageBtn")?.setAttribute("aria-expanded", "false");
+      openCourse(cid);
+      return;
+    }
+
+    const picsBtn = e.target.closest("[data-nmp-pics]");
+    if (picsBtn) {
+      const cid = picsBtn.dataset.nmpPics;
+      const pop = $("#navManagePopover"); if (pop) pop.hidden = true;
+      $("#navManageBtn")?.setAttribute("aria-expanded", "false");
+      openCourseFolders(cid);
+      return;
+    }
+
+    const notesBtn = e.target.closest("[data-nmp-notes]");
+    if (notesBtn) {
+      const cid = notesBtn.dataset.nmpNotes;
+      const pop = $("#navManagePopover"); if (pop) pop.hidden = true;
+      $("#navManageBtn")?.setAttribute("aria-expanded", "false");
+      docFilterState.courseId = cid;
+      const select = $("#docCourseFilter");
+      if (select) select.value = cid;
+      navigate("notes");
+      return;
+    }
+
+    const calBtn = e.target.closest("[data-nmp-cal]");
+    if (calBtn) {
+      const cid = calBtn.dataset.nmpCal;
+      const pop = $("#navManagePopover"); if (pop) pop.hidden = true;
+      $("#navManageBtn")?.setAttribute("aria-expanded", "false");
+      openCalendarModal(cid);
+      return;
+    }
+
+    const editBtn = e.target.closest("[data-nmp-edit]");
+    if (editBtn) {
+      const cid = editBtn.dataset.nmpEdit;
+      const pop = $("#navManagePopover"); if (pop) pop.hidden = true;
+      $("#navManageBtn")?.setAttribute("aria-expanded", "false");
+      openEditCourseModal(cid);
+      return;
+    }
+  });
+
+  // Smart Manage Navbar Controls inside Course Management
+  $("#smnTabLibrary")?.addEventListener("click", () => {
+    toggleCreatorDrawer(false);
+  });
+
+  $("#smnTabAddToggle")?.addEventListener("click", () => {
+    toggleCreatorDrawer();
+  });
+
+  $("#smnQuickSmartAddBtn")?.addEventListener("click", () => openSmartAddModal());
+  $("#smnQuickReceiveBtn")?.addEventListener("click", () => openReceiveCourseModal());
+
+  $("#smnViewSwitcher")?.addEventListener("click", e => {
+    const btn = e.target.closest(".smn-view-btn");
+    if (btn && btn.dataset.viewMode) {
+      switchCourseViewMode(btn.dataset.viewMode);
+    }
+  });
+
+  $("#smnCategoriesStrip")?.addEventListener("click", e => {
+    const pill = e.target.closest(".smn-cat-pill");
+    if (!pill) return;
+    const cat = pill.dataset.mgmtCat !== undefined ? pill.dataset.mgmtCat : "";
+    mgmtFilterState.category = cat;
+    const catSel = $("#mgmtCategoryFilter");
+    if (catSel) catSel.value = cat;
+    renderManagement();
+  });
+
+  // Navbar Preferences in Settings
+  ["prefNavManage", "prefNavPics", "prefNavDocs", "prefNavSchedule", "prefNavAnalytics", "prefNavCalendar"].forEach(id => {
+    $(`#${id}`)?.addEventListener("change", () => {
+      navbarPrefs.manage = !!$("#prefNavManage")?.checked;
+      navbarPrefs.pics = !!$("#prefNavPics")?.checked;
+      navbarPrefs.docs = !!$("#prefNavDocs")?.checked;
+      navbarPrefs.schedule = !!$("#prefNavSchedule")?.checked;
+      navbarPrefs.analytics = !!$("#prefNavAnalytics")?.checked;
+      navbarPrefs.calendar = !!$("#prefNavCalendar")?.checked;
+      saveNavbarPrefs();
+      notify("Navbar updated.");
+    });
+  });
+
+  $("#resetNavbarPrefsBtn")?.addEventListener("click", () => {
+    navbarPrefs = { ...DEFAULT_NAVBAR_PREFS };
+    saveNavbarPrefs();
+    notify("Navbar reset to default.");
+  });
+
   // Initialize Theme Mode, Theme Color, and load DB
+  loadNavbarPrefs();
+  switchCourseViewMode(currentCourseViewMode);
   applyThemeMode(currentThemeMode, false);
   applyTheme(currentTheme, false);
 
