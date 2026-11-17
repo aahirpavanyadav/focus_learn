@@ -18,6 +18,40 @@
           <span class="nav-brand-text">focus<span class="nav-brand-light">learn</span></span>
         </a>
 
+        <!-- Smart Manage Navbar: Course Switcher & Quick Manager -->
+        <div class="nav-manage-wrap" id="navManageWrap">
+          <button type="button" class="nav-manage-btn" id="navManageBtn" title="Smart Course &amp; Library Manager" aria-expanded="false">
+            <span class="nav-manage-dot"></span>
+            <span class="nav-manage-icon">⚡</span>
+            <span class="nav-manage-label" id="navManageLabel">Manage Courses</span>
+            <span class="nav-manage-badge" id="navManageBadge">0</span>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="nav-manage-popover" id="navManagePopover" hidden>
+            <div class="nmp-header">
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <strong>Smart Course Manager</strong>
+                <span class="nmp-count-badge" id="nmpCourseCount">0 courses</span>
+              </div>
+              <div class="nmp-search-wrap">
+                <input type="search" id="nmpCourseSearch" placeholder="Jump or filter courses...">
+              </div>
+            </div>
+            <div class="nmp-course-list" id="nmpCourseList"></div>
+            <div class="nmp-footer">
+              <button type="button" class="nmp-action-btn" id="nmpNewCourseBtn">
+                <span>＋</span> New Course
+              </button>
+              <button type="button" class="nmp-action-btn" id="nmpSmartAddBtn">
+                <span>✨</span> Smart Add
+              </button>
+              <button type="button" class="nmp-action-btn" id="nmpManageAllBtn">
+                <span>📂</span> View All Courses →
+              </button>
+            </div>
+          </div>
+        </div>
+
         <!-- Center: Smart Navigation Links -->
         <nav class="nav-links" id="navLinks">
           <button type="button" class="nav-link active" data-page="dashboard" title="Dashboard">
@@ -42,7 +76,7 @@
             <span class="nav-link-label">Study</span>
           </button>
 
-          <button type="button" class="nav-link" data-page="pictures" title="Pictures Vault">
+          <button type="button" class="nav-link" data-page="pictures" id="navLinkPictures" title="Pictures Vault">
             <span class="nav-link-icon">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
             </span>
@@ -50,7 +84,7 @@
             <span class="nav-badge" id="navPicBadge" hidden>0</span>
           </button>
 
-          <button type="button" class="nav-link" data-page="notes" title="Notes & PDFs">
+          <button type="button" class="nav-link" data-page="notes" id="navLinkNotes" title="Notes &amp; PDFs">
             <span class="nav-link-icon">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
             </span>
@@ -58,16 +92,29 @@
             <span class="nav-badge" id="navDocBadge" hidden>0</span>
           </button>
 
-          <button type="button" class="nav-link" data-page="analytics" title="Learning Analytics">
+          <button type="button" class="nav-link" data-page="analytics" id="navLinkAnalytics" title="Learning Analytics">
             <span class="nav-link-icon">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
             </span>
             <span class="nav-link-label">Analytics</span>
           </button>
+
+          <button type="button" class="nav-link" data-page="schedule" id="navLinkSchedule" title="Study Schedule, Google Calendar &amp; DayFlows">
+            <span class="nav-link-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            </span>
+            <span class="nav-link-label">Schedule &amp; Flow</span>
+          </button>
         </nav>
 
         <!-- Right: Actions & Tools -->
         <div class="nav-actions">
+          <!-- Google Calendar Quick Access Button -->
+          <button type="button" class="nav-calendar-btn" id="navCalendarBtn" title="Access Google Calendar &amp; DayFlows Planner">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <span class="cal-nav-text">Calendar</span>
+          </button>
+
           <!-- Smart Adder Trigger Button -->
           <button type="button" class="smart-add-nav-btn" id="navSmartAddBtn" title="Smart Adder — Auto-detect paste, URLs & files (Ctrl+K)">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
@@ -86,6 +133,14 @@
               <button type="button" class="qc-item" data-qc-action="smart-add">
                 <span class="qc-icon">✨</span>
                 <div><strong>Smart Adder</strong><small>Auto-detect paste, URLs &amp; files</small></div>
+              </button>
+              <button type="button" class="qc-item" data-qc-action="google-calendar">
+                <span class="qc-icon">📅</span>
+                <div><strong>Google Calendar</strong><small>Access calendar &amp; schedule study</small></div>
+              </button>
+              <button type="button" class="qc-item" data-qc-action="dayflows">
+                <span class="qc-icon">⏳</span>
+                <div><strong>DayFlows Planner</strong><small>Timeline schedule &amp; task buckets</small></div>
               </button>
               <button type="button" class="qc-item" data-qc-action="screenshot">
                 <span class="qc-icon">📸</span>
@@ -164,6 +219,10 @@
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
         <span>Notes</span>
       </button>
+      <button type="button" class="mobile-nav-item" data-page="schedule" aria-label="Schedule and Flow">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <span>Schedule</span>
+      </button>
       <button type="button" class="mobile-nav-item" data-page="settings" aria-label="Settings">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         <span>Settings</span>
@@ -183,6 +242,7 @@
           <article class="stat-card"><span class="stat-icon amber">◷</span><div><small>Overall progress</small><strong id="statProgress">0%</strong></div></article>
           <article class="stat-card" style="cursor:pointer;" data-go="pictures"><span class="stat-icon purple">🖼</span><div><small>Saved pictures</small><strong id="statPictures">0</strong></div></article>
           <article class="stat-card" style="cursor:pointer;" data-go="notes"><span class="stat-icon purple">✎</span><div><small>Notes &amp; PDFs</small><strong id="statDocs">0</strong></div></article>
+          <article class="stat-card" style="cursor:pointer;" data-go="schedule" id="statRoutineCard"><span class="stat-icon purple">📅</span><div><small>Routine Planner</small><strong id="statRoutineSchedule">Schedule &amp; Flow</strong></div></article>
         </div>
         <div class="section-heading"><div><p class="eyebrow">YOUR LIBRARY</p><h2>Continue learning</h2></div><button class="text-button" data-go="courses">Manage courses <span>→</span></button></div>
 
@@ -240,6 +300,149 @@
         </article>
       </section>
 
+      <!-- Schedule, Google Calendar & DayFlows Planner Page -->
+      <section class="page" id="page-schedule">
+        <div class="welcome-row">
+          <div>
+            <p class="eyebrow">ROUTINE &amp; TIME FLOW</p>
+            <h1>Calendar &amp; DayFlows Planner</h1>
+            <p class="muted">Access Google Calendar to schedule study blocks, and structure your daily timeline with DayFlows.</p>
+          </div>
+          <div class="header-actions">
+            <button class="secondary-button" id="openGoogleCalendarDirectBtn" type="button" title="Open Google Calendar in a new tab">
+              <span style="font-size:16px;line-height:1">📅</span> Access Google Calendar ↗
+            </button>
+            <button class="primary-button" id="scheduleStudySessionBtn" type="button" title="Schedule study block in Google Calendar">
+              <span>＋</span> Schedule Study Session
+            </button>
+          </div>
+        </div>
+
+        <!-- Schedule Tabs -->
+        <div class="schedule-tab-strip" id="scheduleTabStrip">
+          <button type="button" class="schedule-tab-btn active" data-schedule-tab="dayflows" id="tabDayflowsBtn">
+            <span class="tab-icon">⏳</span> DayFlows Timeline Planner
+          </button>
+          <button type="button" class="schedule-tab-btn" data-schedule-tab="calendar" id="tabCalendarBtn">
+            <span class="tab-icon">📅</span> Google Calendar &amp; Study Scheduler
+          </button>
+        </div>
+
+        <!-- View 1: DayFlows Embed -->
+        <div class="schedule-tab-view active" id="viewScheduleDayflows">
+          <div class="dayflows-frame-container" id="dayflowsContainer">
+            <div class="dayflows-header-bar">
+              <div class="dayflows-info">
+                <div class="dayflows-brand">
+                  <span class="dayflows-dot"></span>
+                  <strong>DayFlows Planner</strong>
+                  <span class="dayflows-badge">Live Integration</span>
+                </div>
+                <small class="muted">Interactive timeline day planner, task bucket, and sleep scheduler from <a href="https://dayflows.blogspot.com/?m=1" target="_blank" rel="noopener noreferrer" style="color:var(--accent);text-decoration:none;font-weight:600">dayflows.blogspot.com ↗</a></small>
+              </div>
+              <div class="dayflows-actions">
+                <button type="button" class="mini-btn-action" id="reloadDayflowsBtn" title="Reload DayFlows frame">🔄 Reload</button>
+                <button type="button" class="mini-btn-action" id="fullscreenDayflowsBtn" title="Toggle larger view">⛶ Expand</button>
+                <a href="https://dayflows.blogspot.com/?m=1" target="_blank" rel="noopener noreferrer" class="mini-btn-action" id="openDayflowsNewTabBtn" title="Open DayFlows directly in a new window">↗ Open in Tab</a>
+              </div>
+            </div>
+            <div class="dayflows-frame-wrapper" id="dayflowsFrameWrapper">
+              <iframe id="dayflowsIframe" src="https://dayflows.blogspot.com/?m=1" title="DayFlows Daily Timeline Planner" class="dayflows-iframe" loading="lazy" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"></iframe>
+            </div>
+          </div>
+        </div>
+
+        <!-- View 2: Google Calendar & Event Scheduler -->
+        <div class="schedule-tab-view" id="viewScheduleCalendar" hidden>
+          <div class="calendar-grid-layout">
+            <!-- 1-Click Quick Study Session Creator -->
+            <div class="panel cal-scheduler-panel">
+              <div class="cal-panel-head">
+                <span class="cal-panel-icon">📅</span>
+                <div>
+                  <h3>Schedule Study Session</h3>
+                  <p class="muted small">Generate an instant Google Calendar event with one click.</p>
+                </div>
+              </div>
+              <form id="googleCalSchedulerForm" class="cal-scheduler-form">
+                <div>
+                  <label for="calEventCourseSelect">Course <span class="required">*</span></label>
+                  <select id="calEventCourseSelect" required></select>
+                </div>
+                <div>
+                  <label for="calEventTitleInput">Session / Topic Title <span class="required">*</span></label>
+                  <input type="text" id="calEventTitleInput" placeholder="e.g. Master React Hooks &amp; Custom Hooks" required>
+                </div>
+                <div class="cal-form-row">
+                  <div>
+                    <label for="calEventDateInput">Date <span class="required">*</span></label>
+                    <input type="date" id="calEventDateInput" required>
+                  </div>
+                  <div>
+                    <label for="calEventTimeInput">Start Time <span class="required">*</span></label>
+                    <input type="time" id="calEventTimeInput" required>
+                  </div>
+                </div>
+                <div>
+                  <label>Duration</label>
+                  <div class="cal-dur-chips" id="calDurChips">
+                    <button type="button" class="cal-dur-chip" data-mins="30">30 min</button>
+                    <button type="button" class="cal-dur-chip" data-mins="45">45 min</button>
+                    <button type="button" class="cal-dur-chip active" data-mins="60">1 hour</button>
+                    <button type="button" class="cal-dur-chip" data-mins="90">1.5 hr</button>
+                    <button type="button" class="cal-dur-chip" data-mins="120">2 hours</button>
+                  </div>
+                  <input type="hidden" id="calEventDurationInput" value="60">
+                </div>
+                <div>
+                  <label for="calEventNotesInput">Notes / Target Goals <span class="optional">Optional</span></label>
+                  <textarea id="calEventNotesInput" rows="2" placeholder="e.g. Complete module 2 lessons and capture study diagrams in FocusLearn"></textarea>
+                </div>
+                <button type="submit" class="primary-button" id="calSubmitAddBtn" style="width:100%;justify-content:center">
+                  <span>📅</span> Add to Google Calendar <span>↗</span>
+                </button>
+              </form>
+            </div>
+
+            <!-- Direct Google Calendar Hub & Links -->
+            <div class="cal-links-column">
+              <div class="panel cal-direct-card">
+                <div class="cal-google-badge">
+                  <span class="gcal-logo">G</span>
+                  <strong>Google Calendar</strong>
+                </div>
+                <h3>Access your personal calendar</h3>
+                <p class="muted">Open Google Calendar in your browser with one click to check deadlines, exam dates, and daily study blocks.</p>
+                <div class="cal-quick-actions">
+                  <a href="https://calendar.google.com/calendar/r" target="_blank" rel="noopener noreferrer" class="primary-button" style="text-decoration:none;display:inline-flex;align-items:center;gap:8px">
+                    <span>📅</span> Open Google Calendar Web <span>↗</span>
+                  </a>
+                  <a href="https://calendar.google.com/calendar/r/day" target="_blank" rel="noopener noreferrer" class="secondary-button" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px">
+                    <span>☀️</span> Today's Schedule ↗
+                  </a>
+                  <a href="https://calendar.google.com/calendar/r/week" target="_blank" rel="noopener noreferrer" class="secondary-button" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px">
+                    <span>📆</span> This Week ↗
+                  </a>
+                  <a href="https://calendar.google.com/calendar/r/month" target="_blank" rel="noopener noreferrer" class="secondary-button" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px">
+                    <span>🗓</span> Monthly View ↗
+                  </a>
+                </div>
+              </div>
+
+              <!-- DayFlows Quick Switch Card -->
+              <div class="panel cal-dayflows-card">
+                <div class="dayflows-brand-small">
+                  <span>⏳</span>
+                  <strong>DayFlows Timeline</strong>
+                </div>
+                <p class="muted small">Need an interactive timeline or task bucket for today? Switch to the DayFlows tab to arrange your learning blocks.</p>
+                <button type="button" class="secondary-button mini" id="switchToDayflowsTabBtn">Switch to DayFlows ➔</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section class="page" id="page-courses">
         <div class="page-heading">
           <div><p class="eyebrow">BUILD YOUR LIBRARY</p><h1>Course management</h1><p class="muted">Organize videos into courses, modules, and lessons.</p></div>
@@ -248,90 +451,46 @@
             <button type="button" class="primary-button" id="mgmtSmartAddBtn" title="Smart Adder intake">✨ Smart Add</button>
           </div>
         </div>
-        <div class="management-layout">
-          <div class="panel create-panel">
-            <div class="panel-title"><div><span class="step">01</span><h3>Create a course</h3></div></div>
-            <form id="courseForm">
-              <label for="courseName">Course name</label>
-              <input id="courseName" maxlength="70" placeholder="e.g. JavaScript Mastery" required>
-              <label for="courseCategory">Category</label>
-              <select id="courseCategory">
-                <option value="Programming">Programming &amp; Web Dev</option>
-                <option value="Computer Science">Computer Science &amp; AI</option>
-                <option value="Design">Design &amp; UI/UX</option>
-                <option value="Academics">Academics &amp; Science</option>
-                <option value="Languages">Languages</option>
-                <option value="Business">Business &amp; Finance</option>
-                <option value="Personal">Personal Development</option>
-                <option value="General" selected>General</option>
-                <option value="Other">Other</option>
-              </select>
-              <label for="courseDescription">Description <span class="optional">Optional</span></label>
-              <textarea id="courseDescription" rows="3" maxlength="180" placeholder="What will you learn?"></textarea>
-              <button class="primary-button full" type="submit">Create course <span>→</span></button>
-            </form>
-          </div>
-          <div class="panel add-panel">
-            <div class="panel-title"><div><span class="step">02</span><h3>Add content to course</h3></div></div>
-            <div class="content-type-tabs">
-              <button type="button" class="type-tab-btn active" data-add-mode="video">📺 Single video</button>
-              <button type="button" class="type-tab-btn" data-add-mode="playlist">📑 YouTube playlist</button>
-              <button type="button" class="type-tab-btn" data-add-mode="bulk">📋 Batch URLs</button>
+
+        <!-- Sticky Smart Manage Navbar for Courses -->
+        <div class="smart-manage-navbar" id="smartManageNavbar">
+          <!-- Top Row: Tabs & Action Tools -->
+          <div class="smn-header-strip">
+            <div class="smn-tabs-group">
+              <button type="button" class="smn-tab active" data-smn-tab="library" id="smnTabLibrary">
+                <span>📚</span> Courses Library (<span id="smnTotalCourses">0</span>)
+              </button>
+              <button type="button" class="smn-tab" data-smn-tab="add" id="smnTabAddToggle" title="Toggle Course &amp; Content Creator Forms">
+                <span id="smnTabAddIcon">＋</span> <span id="smnTabAddText">Create / Add Content</span>
+              </button>
             </div>
 
-            <!-- Single Video Form -->
-            <form id="lessonForm" class="add-mode-form">
-              <label for="lessonCourse">Add to course</label><select id="lessonCourse" required><option value="">Choose a course</option></select>
-              <label for="moduleName">Module name</label><input id="moduleName" maxlength="70" placeholder="e.g. JavaScript fundamentals" required>
-              <label for="videoTitle">Video title <span class="optional">Optional</span></label><input id="videoTitle" maxlength="120" placeholder="Leave blank to use lesson number">
-              <label for="videoUrl">YouTube video URL</label><div class="url-input"><input id="videoUrl" type="url" placeholder="https://www.youtube.com/watch?v=..." required><span>YT</span></div>
-              <div class="video-preview" id="videoPreview"><div class="preview-placeholder">▶</div><div><strong>Video preview</strong><small>Paste a YouTube URL to preview its thumbnail.</small></div></div>
-              <button class="primary-button full" type="submit">Add video <span>＋</span></button>
-            </form>
-
-            <!-- YouTube Playlist Form -->
-            <form id="playlistForm" class="add-mode-form" hidden>
-              <label for="playlistCourse">Add to course</label><select id="playlistCourse" required><option value="">Choose a course</option></select>
-              <label for="playlistModuleName">Module name</label><input id="playlistModuleName" maxlength="70" placeholder="e.g. Full Course Series" required>
-              <label for="playlistTitle">Playlist title <span class="required">*</span></label><input id="playlistTitle" maxlength="120" placeholder="e.g. Complete React &amp; Next.js Masterclass" required>
-              <label for="playlistUrl">YouTube playlist URL or ID</label><div class="url-input"><input id="playlistUrl" type="url" placeholder="https://www.youtube.com/playlist?list=PL..." required><span style="background:#29243c;color:#b9adff">PL</span></div>
-              <div class="video-preview" id="playlistPreview"><div class="preview-placeholder" style="background:#262238;color:#b9adff">≡</div><div><strong>Playlist preview</strong><small>Paste a YouTube playlist URL (contains ?list=PL...).</small></div></div>
-
-              <div class="playlist-vids-input-block" style="margin-top:14px">
-                <label for="playlistVideosInput">Videos in this playlist <span class="optional">Optional — paste links or fetch</span></label>
-                <textarea id="playlistVideosInput" rows="3" placeholder="Paste YouTube watch URLs (one per line) or click fetch below"></textarea>
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;gap:8px">
-                  <button type="button" class="secondary-button" id="formFetchPlaylistBtn" style="padding:6px 11px;font-size:11px">⚡ Fetch from YouTube</button>
-                  <span class="muted small" id="formPlaylistVideosCounter">0 videos detected</span>
-                </div>
+            <div class="smn-tools-group">
+              <button type="button" class="smn-action-pill" id="smnQuickSmartAddBtn" title="Universal Smart Adder (Ctrl+K)">✨ Smart Add</button>
+              <button type="button" class="smn-action-pill" id="smnQuickReceiveBtn" title="Receive Course JSON">📥 Import</button>
+              <div class="smn-view-switcher" id="smnViewSwitcher" title="Switch course layout view">
+                <button type="button" class="smn-view-btn active" data-view-mode="accordion" id="viewModeAccordion" title="Detailed Accordion (Modules &amp; Lessons)">≣ Detailed</button>
+                <button type="button" class="smn-view-btn" data-view-mode="compact" id="viewModeCompact" title="Compact Cards Grid">⊞ Cards</button>
+                <button type="button" class="smn-view-btn" data-view-mode="list" id="viewModeList" title="Dense Table / List View">☰ List</button>
               </div>
-
-              <button class="primary-button full" type="submit">Add playlist to course <span>＋</span></button>
-            </form>
-
-            <!-- Batch URLs Form -->
-            <form id="bulkForm" class="add-mode-form" hidden>
-              <label for="bulkCourse">Add to course</label><select id="bulkCourse" required><option value="">Choose a course</option></select>
-              <label for="bulkModuleName">Module name</label><input id="bulkModuleName" maxlength="70" placeholder="e.g. Playlist Lessons" required>
-              <label for="bulkUrls">YouTube video URLs <span class="optional">One per line</span></label>
-              <textarea id="bulkUrls" rows="4" placeholder="https://www.youtube.com/watch?v=...&#10;https://www.youtube.com/watch?v=...&#10;https://youtu.be/..." required></textarea>
-              <div class="small muted" id="bulkCounter" style="margin-top:6px">0 valid YouTube links detected</div>
-              <button class="primary-button full" type="submit">Import all videos <span>＋</span></button>
-            </form>
+            </div>
           </div>
-        </div>
-        <div class="section-heading list-heading"><div><p class="eyebrow">STRUCTURE</p><h2>All courses</h2></div><span class="muted small" id="courseCountLabel">0 courses</span></div>
 
-        <!-- Multi-Course Smart Management Toolbar -->
-        <div class="mgmt-controls-bar" id="mgmtControlsBar">
-          <div class="mgmt-toolbar-row">
-            <div class="mgmt-search-wrap">
+          <!-- Filter & Search Command Strip -->
+          <div class="smn-filter-strip">
+            <div class="smn-search-wrap">
               <span class="search-icon">🔍</span>
               <input type="search" id="mgmtCourseSearch" placeholder="Search courses, modules, lessons, playlists...">
               <button type="button" class="clear-search-btn" id="mgmtSearchClear" hidden title="Clear search">✕</button>
             </div>
-            <div class="mgmt-filters-wrap">
-              <select id="mgmtCategoryFilter">
+
+            <!-- Scrollable Category Filter Pills Carousel -->
+            <div class="smn-categories-strip" id="smnCategoriesStrip">
+              <button type="button" class="smn-cat-pill active" data-mgmt-cat="">All</button>
+            </div>
+
+            <div class="smn-filter-dropdowns">
+              <select id="mgmtCategoryFilter" hidden>
                 <option value="">All categories</option>
               </select>
               <select id="mgmtStatusFilter">
@@ -349,13 +508,15 @@
                 <option value="lessons_desc">Most lessons</option>
                 <option value="oldest">Oldest first</option>
               </select>
-            </div>
-            <div class="mgmt-btn-group">
-              <button type="button" class="mini-button" id="mgmtExpandAllBtn" title="Expand all course modules and lessons">▼ Expand all</button>
-              <button type="button" class="mini-button" id="mgmtCollapseAllBtn" title="Collapse courses into compact cards">▲ Collapse all</button>
+              <div class="mgmt-btn-group">
+                <button type="button" class="mini-button" id="mgmtExpandAllBtn" title="Expand all course modules and lessons">▼ Expand all</button>
+                <button type="button" class="mini-button" id="mgmtCollapseAllBtn" title="Collapse courses into compact cards">▲ Collapse all</button>
+              </div>
             </div>
           </div>
-          <div class="mgmt-stats-strip">
+
+          <!-- Summary Strip -->
+          <div class="smn-summary-strip">
             <div class="mgmt-pill-group">
               <span class="mgmt-stat-pill" id="mgmtPillTotal">0 Courses</span>
               <span class="mgmt-stat-pill" id="mgmtPillActive">0 In Progress</span>
@@ -368,7 +529,83 @@
           </div>
         </div>
 
-        <div id="managementCourses" class="management-courses"></div>
+        <!-- Collapsible Creator Drawer for Adding Courses & Content -->
+        <div class="smn-creator-drawer" id="smnCreatorDrawer" hidden>
+          <div class="management-layout">
+            <div class="panel create-panel">
+              <div class="panel-title"><div><span class="step">01</span><h3>Create a course</h3></div></div>
+              <form id="courseForm">
+                <label for="courseName">Course name</label>
+                <input id="courseName" maxlength="70" placeholder="e.g. JavaScript Mastery" required>
+                <label for="courseCategory">Category</label>
+                <select id="courseCategory">
+                  <option value="Programming">Programming &amp; Web Dev</option>
+                  <option value="Computer Science">Computer Science &amp; AI</option>
+                  <option value="Design">Design &amp; UI/UX</option>
+                  <option value="Academics">Academics &amp; Science</option>
+                  <option value="Languages">Languages</option>
+                  <option value="Business">Business &amp; Finance</option>
+                  <option value="Personal">Personal Development</option>
+                  <option value="General" selected>General</option>
+                  <option value="Other">Other</option>
+                </select>
+                <label for="courseDescription">Description <span class="optional">Optional</span></label>
+                <textarea id="courseDescription" rows="3" maxlength="180" placeholder="What will you learn?"></textarea>
+                <button class="primary-button full" type="submit">Create course <span>→</span></button>
+              </form>
+            </div>
+            <div class="panel add-panel">
+              <div class="panel-title"><div><span class="step">02</span><h3>Add content to course</h3></div></div>
+              <div class="content-type-tabs">
+                <button type="button" class="type-tab-btn active" data-add-mode="video">📺 Single video</button>
+                <button type="button" class="type-tab-btn" data-add-mode="playlist">📑 YouTube playlist</button>
+                <button type="button" class="type-tab-btn" data-add-mode="bulk">📋 Batch URLs</button>
+              </div>
+
+              <!-- Single Video Form -->
+              <form id="lessonForm" class="add-mode-form">
+                <label for="lessonCourse">Add to course</label><select id="lessonCourse" required><option value="">Choose a course</option></select>
+                <label for="moduleName">Module name</label><input id="moduleName" maxlength="70" placeholder="e.g. JavaScript fundamentals" required>
+                <label for="videoTitle">Video title <span class="optional">Optional</span></label><input id="videoTitle" maxlength="120" placeholder="Leave blank to use lesson number">
+                <label for="videoUrl">YouTube video URL</label><div class="url-input"><input id="videoUrl" type="url" placeholder="https://www.youtube.com/watch?v=..." required><span>YT</span></div>
+                <div class="video-preview" id="videoPreview"><div class="preview-placeholder">▶</div><div><strong>Video preview</strong><small>Paste a YouTube URL to preview its thumbnail.</small></div></div>
+                <button class="primary-button full" type="submit">Add video <span>＋</span></button>
+              </form>
+
+              <!-- YouTube Playlist Form -->
+              <form id="playlistForm" class="add-mode-form" hidden>
+                <label for="playlistCourse">Add to course</label><select id="playlistCourse" required><option value="">Choose a course</option></select>
+                <label for="playlistModuleName">Module name</label><input id="playlistModuleName" maxlength="70" placeholder="e.g. Full Course Series" required>
+                <label for="playlistTitle">Playlist title <span class="required">*</span></label><input id="playlistTitle" maxlength="120" placeholder="e.g. Complete React &amp; Next.js Masterclass" required>
+                <label for="playlistUrl">YouTube playlist URL or ID</label><div class="url-input"><input id="playlistUrl" type="url" placeholder="https://www.youtube.com/playlist?list=PL..." required><span style="background:#29243c;color:#b9adff">PL</span></div>
+                <div class="video-preview" id="playlistPreview"><div class="preview-placeholder" style="background:#262238;color:#b9adff">≡</div><div><strong>Playlist preview</strong><small>Paste a YouTube playlist URL (contains ?list=PL...).</small></div></div>
+
+                <div class="playlist-vids-input-block" style="margin-top:14px">
+                  <label for="playlistVideosInput">Videos in this playlist <span class="optional">Optional — paste links or fetch</span></label>
+                  <textarea id="playlistVideosInput" rows="3" placeholder="Paste YouTube watch URLs (one per line) or click fetch below"></textarea>
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;gap:8px">
+                    <button type="button" class="secondary-button" id="formFetchPlaylistBtn" style="padding:6px 11px;font-size:11px">⚡ Fetch from YouTube</button>
+                    <span class="muted small" id="formPlaylistVideosCounter">0 videos detected</span>
+                  </div>
+                </div>
+
+                <button class="primary-button full" type="submit">Add playlist to course <span>＋</span></button>
+              </form>
+
+              <!-- Batch URLs Form -->
+              <form id="bulkForm" class="add-mode-form" hidden>
+                <label for="bulkCourse">Add to course</label><select id="bulkCourse" required><option value="">Choose a course</option></select>
+                <label for="bulkModuleName">Module name</label><input id="bulkModuleName" maxlength="70" placeholder="e.g. Playlist Lessons" required>
+                <label for="bulkUrls">YouTube video URLs <span class="optional">One per line</span></label>
+                <textarea id="bulkUrls" rows="4" placeholder="https://www.youtube.com/watch?v=...&#10;https://www.youtube.com/watch?v=...&#10;https://youtu.be/..." required></textarea>
+                <div class="small muted" id="bulkCounter" style="margin-top:6px">0 valid YouTube links detected</div>
+                <button class="primary-button full" type="submit">Import all videos <span>＋</span></button>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <div id="managementCourses" class="management-courses view-accordion"></div>
         <div class="empty-state compact" id="managementEmpty"><div class="empty-art">＋</div><h3>No courses yet</h3><p>Create a course to start organizing your lessons.</p></div>
       </section>
 
@@ -377,7 +614,7 @@
         <div class="player-layout">
           <div class="player-main">
             <div class="video-frame" id="videoFrame"><div class="player-placeholder">Select a lesson to begin</div></div>
-            <div class="lesson-heading"><div><p class="eyebrow" id="playerModuleLabel">NOW LEARNING</p><h1 id="playerLessonTitle">Choose a lesson</h1><p class="muted" id="playerLessonMeta">Your progress is saved automatically on this device.</p></div><div class="player-actions"><div class="study-timer"><span class="timer-dot" id="timerDot"></span><strong id="studyTimerDisplay">00:00:00</strong><button class="timer-button" id="studyTimerToggle" type="button">Start study</button></div><button class="mini-button" id="playerScreenshotBtn" type="button" title="Capture active study screenshot with timestamp and course tag" style="padding:10px 12px;font-weight:700">📸 Screenshot</button><button class="mini-button" id="playerCoursePicsBtn" type="button" title="View or add pictures for this course" style="padding:10px 12px;font-weight:700">🖼 Pictures</button><button class="mini-button" id="playerCourseNotesBtn" type="button" title="View or create notes & PDFs for this course" style="padding:10px 12px;font-weight:700">✎ Notes &amp; PDFs</button><button class="complete-button" id="completeButton">✓ Mark complete</button></div></div>
+            <div class="lesson-heading"><div><p class="eyebrow" id="playerModuleLabel">NOW LEARNING</p><h1 id="playerLessonTitle">Choose a lesson</h1><p class="muted" id="playerLessonMeta">Your progress is saved automatically on this device.</p></div><div class="player-actions"><div class="study-timer"><span class="timer-dot" id="timerDot"></span><strong id="studyTimerDisplay">00:00:00</strong><button class="timer-button" id="studyTimerToggle" type="button">Start study</button></div><button class="mini-button" id="playerScreenshotBtn" type="button" title="Capture active study screenshot with timestamp and course tag" style="padding:10px 12px;font-weight:700">📸 Screenshot</button><button class="mini-button" id="playerCoursePicsBtn" type="button" title="View or add pictures for this course" style="padding:10px 12px;font-weight:700">🖼 Pictures</button><button class="mini-button" id="playerCourseNotesBtn" type="button" title="View or create notes & PDFs for this course" style="padding:10px 12px;font-weight:700">✎ Notes &amp; PDFs</button><button class="mini-button" id="playerScheduleBtn" type="button" title="Schedule study session in Google Calendar" style="padding:10px 12px;font-weight:700">📅 Schedule</button><button class="complete-button" id="completeButton">✓ Mark complete</button></div></div>
             <div class="panel lesson-note"><h3>Stay focused</h3><p>Keep this space for the lesson. When you're finished, mark it complete and move to the next one.</p></div>
           </div>
           <aside class="panel curriculum" id="playerSidebar">
@@ -719,6 +956,62 @@
             <p class="muted small" style="margin:4px 0 0">Carefully tuned palettes that look stunning in both Dark and White modes.</p>
           </div>
           <div class="theme-grid" id="themeCardsGrid"></div>
+        </div>
+
+        <!-- Smart Navbar Controls Panel -->
+        <div class="panel theme-settings-panel" style="margin-top:24px">
+          <div class="theme-panel-head">
+            <div>
+              <p class="eyebrow">SMART NAVBAR CONTROLS</p>
+              <h2>Manage Navbar Items</h2>
+              <p class="muted">Customize which shortcuts and modules appear in your top navigation bar.</p>
+            </div>
+            <button type="button" class="secondary-button mini" id="resetNavbarPrefsBtn">Reset to Default</button>
+          </div>
+          <div class="nav-pref-grid" id="navPrefGrid">
+            <label class="nav-pref-item">
+              <input type="checkbox" id="prefNavManage" checked>
+              <div>
+                <strong>Smart Course Switcher &amp; Manager</strong>
+                <small>Quick course switcher pill in top navbar</small>
+              </div>
+            </label>
+            <label class="nav-pref-item">
+              <input type="checkbox" id="prefNavPics" checked>
+              <div>
+                <strong>Pictures Vault</strong>
+                <small>Screenshots &amp; visual diagrams tab</small>
+              </div>
+            </label>
+            <label class="nav-pref-item">
+              <input type="checkbox" id="prefNavDocs" checked>
+              <div>
+                <strong>Notes &amp; PDFs</strong>
+                <small>Document reader and notes vault tab</small>
+              </div>
+            </label>
+            <label class="nav-pref-item">
+              <input type="checkbox" id="prefNavSchedule" checked>
+              <div>
+                <strong>Schedule &amp; Flow</strong>
+                <small>Google Calendar &amp; DayFlows planner tab</small>
+              </div>
+            </label>
+            <label class="nav-pref-item">
+              <input type="checkbox" id="prefNavAnalytics" checked>
+              <div>
+                <strong>Analytics</strong>
+                <small>Study time, streak, and 7-day consistency chart</small>
+              </div>
+            </label>
+            <label class="nav-pref-item">
+              <input type="checkbox" id="prefNavCalendar" checked>
+              <div>
+                <strong>Quick Calendar Button</strong>
+                <small>1-click Google Calendar launch in nav actions</small>
+              </div>
+            </label>
+          </div>
         </div>
 
         <div class="section-heading" style="margin-top:28px">
@@ -1376,6 +1669,84 @@
           <button type="button" class="secondary-button" id="receiveCancelBtn">Cancel</button>
           <button type="button" class="primary-button" id="receiveConfirmBtn" disabled>Import Course <span>＋</span></button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Google Calendar & DayFlows Schedule Modal -->
+  <div class="pic-modal-overlay" id="calendarModalOverlay" hidden>
+    <div class="pic-modal" style="max-width:540px" role="dialog" aria-modal="true" aria-labelledby="calendarModalTitle">
+      <div class="pic-modal-head">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:20px">📅</span>
+          <h3 id="calendarModalTitle" style="margin:0;font-size:16px">Google Calendar &amp; Schedule</h3>
+        </div>
+        <button type="button" class="modal-close-btn" id="calendarModalClose" aria-label="Close dialog">✕</button>
+      </div>
+      <div class="modal-cal-body" style="padding:16px 20px 20px">
+        <!-- Direct Quick Access Actions -->
+        <div class="modal-cal-quick-strip">
+          <a href="https://calendar.google.com/calendar/r" target="_blank" rel="noopener noreferrer" class="cal-quick-pill" id="modalOpenGCalDirectBtn">
+            <span class="gcal-logo">G</span>
+            <span>Open Google Calendar Web ↗</span>
+          </a>
+          <button type="button" class="cal-quick-pill secondary" id="modalOpenDayflowsBtn">
+            <span>⏳</span>
+            <span>Open DayFlows Planner ➔</span>
+          </button>
+        </div>
+
+        <div style="height:1px;background:var(--line);margin:14px 0"></div>
+
+        <form id="modalCalForm" class="pic-modal-form">
+          <h4 style="margin:0 0 4px;font-size:13px;color:var(--text)">Schedule Study Block in Google Calendar</h4>
+          <p class="muted small" style="margin:0 0 12px">Create a study event with 1-click launch into your Google Calendar.</p>
+
+          <div>
+            <label for="modalCalCourseSelect">Course <span class="required">*</span></label>
+            <select id="modalCalCourseSelect" required></select>
+          </div>
+
+          <div>
+            <label for="modalCalTitleInput">Session Topic / Lesson Title <span class="required">*</span></label>
+            <input type="text" id="modalCalTitleInput" placeholder="e.g. Master System Design &amp; Caching" required>
+          </div>
+
+          <div class="cal-form-row">
+            <div>
+              <label for="modalCalDateInput">Date <span class="required">*</span></label>
+              <input type="date" id="modalCalDateInput" required>
+            </div>
+            <div>
+              <label for="modalCalTimeInput">Start Time <span class="required">*</span></label>
+              <input type="time" id="modalCalTimeInput" required>
+            </div>
+          </div>
+
+          <div>
+            <label>Duration</label>
+            <div class="cal-dur-chips" id="modalCalDurChips">
+              <button type="button" class="cal-dur-chip" data-mins="30">30 min</button>
+              <button type="button" class="cal-dur-chip" data-mins="45">45 min</button>
+              <button type="button" class="cal-dur-chip active" data-mins="60">1 hour</button>
+              <button type="button" class="cal-dur-chip" data-mins="90">1.5 hr</button>
+              <button type="button" class="cal-dur-chip" data-mins="120">2 hours</button>
+            </div>
+            <input type="hidden" id="modalCalDurationInput" value="60">
+          </div>
+
+          <div>
+            <label for="modalCalNotesInput">Notes / Objectives <span class="optional">Optional</span></label>
+            <textarea id="modalCalNotesInput" rows="2" placeholder="e.g. Focus on video lessons 3 &amp; 4 and capture lecture notes"></textarea>
+          </div>
+
+          <div class="pic-modal-actions" style="margin-top:14px">
+            <button type="button" class="secondary-button" id="calendarModalCancelBtn">Cancel</button>
+            <button type="submit" class="primary-button" id="modalCalSubmitBtn">
+              <span>📅</span> Add to Google Calendar <span>↗</span>
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   </div>

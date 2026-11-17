@@ -38,6 +38,30 @@ Store, edit, save, view, and delete both PDF documents and created study notes d
 - **Search & Filters**: Search across all notes and PDFs by title, content, or details; filter by course, category, or document type.
 - **Player Integration**: Click **✎ Notes & PDFs** inside the video lesson player to view or create materials linked to the current course.
 
+### 3. Google Calendar Option & DayFlows Planner Integration
+Stay consistent and plan your study routine with seamless 1-click access to Google Calendar and interactive DayFlows timeline integration:
+- **1-Click Google Calendar Access**:
+  - **Navbar Quick Calendar Button**: Instant 1-click **Calendar** button in the Instagram-style top navigation bar to open your study schedule.
+  - **Quick Create Menu**: Open Quick Create (**＋ Create**) and click **Google Calendar** or **DayFlows Planner** from anywhere in the app.
+  - **Direct Web Access Cards**: 1-click launch card opens `https://calendar.google.com/calendar/r` directly in your browser.
+  - **Study Block Event Scheduler**:
+    - Select your target course, enter lesson or revision topic, pick date, start time, duration (30 min, 45 min, 1 hr, 1.5 hr, 2 hrs chips), and optional learning notes.
+    - Click **Add to Google Calendar ↗** to automatically generate a prefilled Google Calendar web intent URL (`action=TEMPLATE&text=...&dates=...&details=...&location=FocusLearn`).
+    - Opens Google Calendar in a new tab with your study block preconfigured, ready to save with 1 click.
+  - **Course Card & Player Scheduling**:
+    - Click **📅 Schedule** on any course card in Course Management to schedule a study block specifically for that course.
+    - Click **📅 Schedule** inside the video lesson player while studying to immediately book your next study session for that lesson.
+- **DayFlows Integration (`https://dayflows.blogspot.com/?m=1`)**:
+  - **Live Interactive Timeline Planner**: Embedded directly inside FocusLearn via a secure, responsive iframe (`https://dayflows.blogspot.com/?m=1`).
+  - Plan your daily routine, arrange time-blocked learning sessions, schedule sleep/wake cycles, and manage task buckets right alongside your courses.
+  - **DayFlows Controls**:
+    - **🔄 Reload**: Refresh the embedded DayFlows frame at any time without reloading FocusLearn.
+    - **⛶ Expand / Minimize**: Toggle an expanded, distraction-free widescreen view of the DayFlows daily planner.
+    - **↗ Open in Tab**: Quick button to open DayFlows in a dedicated browser tab.
+  - **Dedicated Schedule & Flow Page**:
+    - Clean dual-tab view switching seamlessly between **⏳ DayFlows Timeline Planner** and **📅 Google Calendar & Study Scheduler**.
+    - Stat card on the Dashboard gives 1-click access to your daily routine.
+
 ### 4. Screenshot Capture, Course Screenshot Folders & Visual Study Vault
 - **Course Screenshot Folders**:
   - Organize screenshots directly inside courses using custom folders (e.g. `Lecture Slides`, `DSA Diagrams`, `Code Snippets`, `Formulas`, `General`).

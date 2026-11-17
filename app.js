@@ -701,6 +701,7 @@
     if(page==="analytics")renderAnalytics();
     if(page==="pictures")renderPictures();
     if(page==="notes")renderDocuments();
+    if(page==="schedule")renderSchedulePage();
     if(page==="settings")renderThemeCards();
     if (typeof window.scrollTo === "function") window.scrollTo({top:0,behavior:"smooth"});
   }
@@ -719,6 +720,11 @@
     if (picStat) picStat.textContent = picturesList.length;
     const docStat = $("#statDocs");
     if (docStat) docStat.textContent = docsList.length;
+    const routineStat = $("#statRoutineSchedule");
+    if (routineStat) {
+      const todayStr = new Date().toLocaleDateString(undefined, { weekday: "short" });
+      routineStat.textContent = `${todayStr} • Active`;
+    }
 
     const dashFilterBar = $("#dashFilterBar");
     if (dashFilterBar) {
@@ -993,6 +999,7 @@
             </div>
             <div class="course-actions">
               <button type="button" class="mini-button" data-open-course="${c.id}">Study course →</button>
+              <button type="button" class="mini-button" data-schedule-course="${c.id}" title="Schedule study session for this course in Google Calendar">📅 Schedule</button>
               <button type="button" class="mini-button" data-course-folders="${c.id}" title="Open screenshot folders for this course">📂 Screenshots (${picturesList.filter(p => p.courseId === c.id).length})</button>
               <button type="button" class="mini-button" data-share-course="${c.id}" title="Share course via JSON">↗ Share</button>
               <button type="button" class="mini-button edit" data-edit-course-modal="${c.id}">✎ Edit</button>
@@ -1989,6 +1996,7 @@
     renderDocuments();
     renderThemeCards();
     updateNavBadges();
+    if($("#page-schedule")?.classList.contains("active"))renderSchedulePage();
     if($("#page-analytics")?.classList.contains("active"))renderAnalytics();
   }
 
@@ -4164,6 +4172,11 @@
         openAddNoteModal();
       } else if (act === "pdf") {
         openAddPdfModal();
+      } else if (act === "google-calendar") {
+        openCalendarModal();
+      } else if (act === "dayflows") {
+        navigate("schedule");
+        switchScheduleTab("dayflows");
       }
       return;
     }
@@ -4175,6 +4188,19 @@
         menu.hidden = true;
         $("#quickCreateBtn")?.setAttribute("aria-expanded", "false");
       }
+    }
+
+    // Schedule study session from course card
+    const schedCourseBtn = e.target.closest("[data-schedule-course]");
+    if (schedCourseBtn) {
+      openCalendarModal(schedCourseBtn.dataset.scheduleCourse);
+      return;
+    }
+
+    // Dashboard routine card click
+    if (e.target.closest("#statRoutineCard")) {
+      navigate("schedule");
+      return;
     }
 
     // Course Share, Folders & Category Pills
@@ -4505,6 +4531,7 @@
         $("#quickCreateBtn")?.setAttribute("aria-expanded", "false");
         return;
       }
+      if (!$("#calendarModalOverlay")?.hidden) { closeCalendarModal(); return; }
       if (!$("#smartAddModalOverlay")?.hidden) { closeSmartAddModal(); return; }
       if (!$("#courseFolderModalOverlay")?.hidden) { $("#courseFolderModalOverlay").hidden = true; return; }
       if (!$("#shareCourseModalOverlay")?.hidden) { closeShareCourseModal(); return; }
@@ -4954,6 +4981,265 @@
     } finally {
       e.target.value = "";
     }
+  });
+
+  // ============================================================
+  // GOOGLE CALENDAR & DAYFLOWS INTEGRATION
+  // ============================================================
+  let activeScheduleTab = "dayflows"; // "dayflows" | "calendar"
+
+  function formatGCalTimestamp(dateStr, timeStr, durationMinutes = 60) {
+    try {
+      const start = new Date(`${dateStr}T${timeStr}:00`);
+      if (isNaN(start.getTime())) return null;
+      const end = new Date(start.getTime() + (Number(durationMinutes) || 60) * 60 * 1000);
+      const toGCalIso = d => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+      return `${toGCalIso(start)}/${toGCalIso(end)}`;
+    } catch {
+      return null;
+    }
+  }
+
+  function generateGoogleCalendarUrl({ title, date, time, durationMinutes = 60, details = "", location = "FocusLearn" }) {
+    if (!date || !time) {
+      return "https://calendar.google.com/calendar/r";
+    }
+    const dates = formatGCalTimestamp(date, time, durationMinutes);
+    if (!dates) return "https://calendar.google.com/calendar/r";
+    const params = new URLSearchParams({
+      action: "TEMPLATE",
+      text: title || "FocusLearn Study Session",
+      dates: dates,
+      details: details || "Study session scheduled via FocusLearn",
+      location: location || "FocusLearn"
+    });
+    return `https://calendar.google.com/calendar/render?${params.toString()}`;
+  }
+
+  function switchScheduleTab(tabName) {
+    activeScheduleTab = tabName;
+    const tabDayflowsBtn = $("#tabDayflowsBtn");
+    const tabCalendarBtn = $("#tabCalendarBtn");
+    const viewDayflows = $("#viewScheduleDayflows");
+    const viewCalendar = $("#viewScheduleCalendar");
+
+    if (tabDayflowsBtn) tabDayflowsBtn.classList.toggle("active", tabName === "dayflows");
+    if (tabCalendarBtn) tabCalendarBtn.classList.toggle("active", tabName === "calendar");
+    if (viewDayflows) viewDayflows.hidden = (tabName !== "dayflows");
+    if (viewCalendar) viewCalendar.hidden = (tabName !== "calendar");
+  }
+
+  function populateCourseSelectOptions(selectEl, selectedId = "") {
+    if (!selectEl) return;
+    if (state.courses.length === 0) {
+      selectEl.innerHTML = `<option value="">General Study (No courses yet)</option>`;
+      return;
+    }
+    selectEl.innerHTML = state.courses.map(c => `
+      <option value="${esc(c.id)}" ${c.id === selectedId ? "selected" : ""}>${esc(c.name)}</option>
+    `).join("");
+  }
+
+  function getNextHourTime() {
+    const now = new Date();
+    now.setHours(now.getHours() + 1, 0, 0, 0);
+    const hh = String(now.getHours()).padStart(2, "0");
+    const mm = String(now.getMinutes()).padStart(2, "0");
+    return `${hh}:${mm}`;
+  }
+
+  function getTodayDateStr() {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    const dd = String(now.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  function renderSchedulePage() {
+    switchScheduleTab(activeScheduleTab);
+    const courseSelect = $("#calEventCourseSelect");
+    if (courseSelect) {
+      populateCourseSelectOptions(courseSelect, courseSelect.value);
+    }
+    const dateInput = $("#calEventDateInput");
+    if (dateInput && !dateInput.value) {
+      dateInput.value = getTodayDateStr();
+    }
+    const timeInput = $("#calEventTimeInput");
+    if (timeInput && !timeInput.value) {
+      timeInput.value = getNextHourTime();
+    }
+  }
+
+  function openCalendarModal(prefillCourseId = "", prefillTitle = "") {
+    const overlay = $("#calendarModalOverlay");
+    if (!overlay) return;
+    const courseSelect = $("#modalCalCourseSelect");
+    populateCourseSelectOptions(courseSelect, prefillCourseId || (state.courses[0] ? state.courses[0].id : ""));
+
+    const course = state.courses.find(c => c.id === (prefillCourseId || courseSelect?.value));
+    const titleInput = $("#modalCalTitleInput");
+    if (titleInput) {
+      titleInput.value = prefillTitle || (course ? `Study: ${course.name}` : "Focused Study Session");
+    }
+
+    const dateInput = $("#modalCalDateInput");
+    if (dateInput) dateInput.value = getTodayDateStr();
+
+    const timeInput = $("#modalCalTimeInput");
+    if (timeInput) timeInput.value = getNextHourTime();
+
+    const durInput = $("#modalCalDurationInput");
+    if (durInput) durInput.value = "60";
+    $$("#modalCalDurChips .cal-dur-chip").forEach(chip => {
+      chip.classList.toggle("active", chip.dataset.mins === "60");
+    });
+
+    const notesInput = $("#modalCalNotesInput");
+    if (notesInput) {
+      notesInput.value = course ? `Course: ${course.name}\nScheduled via FocusLearn` : "Scheduled via FocusLearn";
+    }
+
+    overlay.hidden = false;
+  }
+
+  function closeCalendarModal() {
+    const overlay = $("#calendarModalOverlay");
+    if (overlay) overlay.hidden = true;
+    if (typeof $("#modalCalForm")?.reset === "function") $("#modalCalForm").reset();
+  }
+
+  // Navigation & Header Calendar triggers
+  $("#navCalendarBtn")?.addEventListener("click", () => navigate("schedule"));
+  $("#openGoogleCalendarDirectBtn")?.addEventListener("click", () => {
+    window.open("https://calendar.google.com/calendar/r", "_blank", "noopener,noreferrer");
+  });
+  $("#scheduleStudySessionBtn")?.addEventListener("click", () => {
+    switchScheduleTab("calendar");
+    const titleInput = $("#calEventTitleInput");
+    if (titleInput) titleInput.focus();
+  });
+
+  // Schedule Tab Switchers
+  $("#tabDayflowsBtn")?.addEventListener("click", () => switchScheduleTab("dayflows"));
+  $("#tabCalendarBtn")?.addEventListener("click", () => switchScheduleTab("calendar"));
+  $("#switchToDayflowsTabBtn")?.addEventListener("click", () => switchScheduleTab("dayflows"));
+
+  // DayFlows Controls
+  $("#reloadDayflowsBtn")?.addEventListener("click", () => {
+    const frame = $("#dayflowsIframe");
+    if (frame) {
+      frame.src = "https://dayflows.blogspot.com/?m=1";
+      notify("DayFlows reloaded.");
+    }
+  });
+
+  $("#fullscreenDayflowsBtn")?.addEventListener("click", () => {
+    const container = $("#dayflowsContainer");
+    if (!container) return;
+    const isExpanded = container.classList.toggle("expanded");
+    const btn = $("#fullscreenDayflowsBtn");
+    if (btn) btn.textContent = isExpanded ? "✕ Minimize" : "⛶ Expand";
+  });
+
+  // Schedule Page: Duration Chips
+  $("#calDurChips")?.addEventListener("click", e => {
+    const chip = e.target.closest(".cal-dur-chip");
+    if (!chip) return;
+    $$("#calDurChips .cal-dur-chip").forEach(c => c.classList.remove("active"));
+    chip.classList.add("active");
+    const durInput = $("#calEventDurationInput") || $("#calDurationInput");
+    if (durInput) durInput.value = chip.dataset.mins || "60";
+  });
+
+  // Schedule Page: Google Calendar Form Submit
+  $("#googleCalSchedulerForm")?.addEventListener("submit", e => {
+    e.preventDefault();
+    const courseId = $("#calEventCourseSelect")?.value;
+    const course = state.courses.find(c => c.id === courseId);
+    const title = $("#calEventTitleInput")?.value.trim() || (course ? `Study: ${course.name}` : "Study Session");
+    const date = $("#calEventDateInput")?.value;
+    const time = $("#calEventTimeInput")?.value;
+    const duration = $("#calEventDurationInput")?.value || $("#calDurationInput")?.value || 60;
+    const notes = $("#calEventNotesInput")?.value.trim();
+    const details = [
+      notes,
+      course ? `Course: ${course.name}` : "",
+      "FocusLearn Study Session: https://github.com/aahirpavanyadav/focus_learn"
+    ].filter(Boolean).join("\n\n");
+
+    const url = generateGoogleCalendarUrl({
+      title,
+      date,
+      time,
+      durationMinutes: duration,
+      details,
+      location: "FocusLearn"
+    });
+
+    window.open(url, "_blank", "noopener,noreferrer");
+    notify("Opening Google Calendar to save your study event!");
+  });
+
+  // Modal: Duration Chips
+  $("#modalCalDurChips")?.addEventListener("click", e => {
+    const chip = e.target.closest(".cal-dur-chip");
+    if (!chip) return;
+    $$("#modalCalDurChips .cal-dur-chip").forEach(c => c.classList.remove("active"));
+    chip.classList.add("active");
+    const durInput = $("#modalCalDurationInput");
+    if (durInput) durInput.value = chip.dataset.mins || "60";
+  });
+
+  // Modal: Form Submit
+  $("#modalCalForm")?.addEventListener("submit", e => {
+    e.preventDefault();
+    const courseId = $("#modalCalCourseSelect")?.value;
+    const course = state.courses.find(c => c.id === courseId);
+    const title = $("#modalCalTitleInput")?.value.trim() || (course ? `Study: ${course.name}` : "Study Session");
+    const date = $("#modalCalDateInput")?.value;
+    const time = $("#modalCalTimeInput")?.value;
+    const duration = $("#modalCalDurationInput")?.value || 60;
+    const notes = $("#modalCalNotesInput")?.value.trim();
+    const details = [
+      notes,
+      course ? `Course: ${course.name}` : "",
+      "FocusLearn Study Session: https://github.com/aahirpavanyadav/focus_learn"
+    ].filter(Boolean).join("\n\n");
+
+    const url = generateGoogleCalendarUrl({
+      title,
+      date,
+      time,
+      durationMinutes: duration,
+      details,
+      location: "FocusLearn"
+    });
+
+    window.open(url, "_blank", "noopener,noreferrer");
+    closeCalendarModal();
+    notify("Study block sent to Google Calendar!");
+  });
+
+  // Modal Controls
+  $("#calendarModalClose")?.addEventListener("click", closeCalendarModal);
+  $("#calendarModalCancelBtn")?.addEventListener("click", closeCalendarModal);
+  $("#calendarModalOverlay")?.addEventListener("click", e => {
+    if (e.target === $("#calendarModalOverlay")) closeCalendarModal();
+  });
+  $("#modalOpenDayflowsBtn")?.addEventListener("click", () => {
+    closeCalendarModal();
+    navigate("schedule");
+    switchScheduleTab("dayflows");
+  });
+
+  // Player Schedule Button
+  $("#playerScheduleBtn")?.addEventListener("click", () => {
+    const c = state.courses.find(x => x.id === currentCourseId);
+    const l = c && lessons(c).find(x => x.id === currentLessonId);
+    const title = l ? `${c?.name || "Course"} - ${l.title}` : (c?.name || "Study Session");
+    openCalendarModal(currentCourseId, title);
   });
 
   // Initialize Theme Mode, Theme Color, and load DB

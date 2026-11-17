@@ -2901,6 +2901,789 @@ textarea { resize: vertical; }
 .footer span { padding: 0 6px; color: var(--accent); }
 
 /* ============================================================
+   GOOGLE CALENDAR & DAYFLOWS INTEGRATION
+   ============================================================ */
+
+/* Navigation Calendar Quick Button */
+.nav-calendar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--text);
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .18s cubic-bezier(.16, 1, .3, 1);
+  text-decoration: none;
+}
+.nav-calendar-btn:hover {
+  background: var(--surface-hover);
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-1px);
+}
+.nav-calendar-btn svg {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+/* Schedule Tab Strip */
+.schedule-tab-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 14px 0 20px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 10px;
+  overflow-x: auto;
+}
+.schedule-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .18s ease;
+  white-space: nowrap;
+}
+.schedule-tab-btn:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+  border-color: var(--accent);
+}
+.schedule-tab-btn.active {
+  background: var(--accent);
+  color: var(--accent-text, #fff);
+  border-color: var(--accent);
+  box-shadow: 0 2px 8px var(--accent-glow);
+}
+
+/* DayFlows Frame Container */
+.dayflows-frame-container {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  transition: all .25s ease;
+}
+.dayflows-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: var(--panel2);
+  border-bottom: 1px solid var(--line);
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.dayflows-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text);
+}
+.dayflows-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
+  animation: pulse-dot 2s infinite ease-in-out;
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
+}
+.dayflows-badge {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--accent-subtle);
+  color: var(--accent);
+  font-weight: 800;
+}
+.dayflows-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dayflows-frame-wrapper {
+  position: relative;
+  width: 100%;
+  height: 78vh;
+  min-height: 600px;
+  background: #ffffff;
+}
+.dayflows-iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+.dayflows-frame-container.expanded {
+  position: fixed;
+  inset: 12px;
+  z-index: 100;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.55);
+}
+.dayflows-frame-container.expanded .dayflows-frame-wrapper {
+  height: calc(100vh - 80px);
+}
+
+/* Google Calendar Section */
+.calendar-grid-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+.cal-scheduler-panel, .cal-info-panel {
+  padding: 20px;
+}
+.cal-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.cal-dur-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+.cal-dur-chip {
+  padding: 6px 12px;
+  border-radius: 20px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .16s ease;
+}
+.cal-dur-chip:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+  border-color: var(--accent);
+}
+.cal-dur-chip.active {
+  background: var(--accent-subtle);
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 800;
+}
+.cal-direct-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border-radius: var(--radius);
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  text-decoration: none;
+  color: var(--text);
+  margin-bottom: 12px;
+  transition: all .2s cubic-bezier(.16, 1, .3, 1);
+}
+.cal-direct-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px var(--accent-glow);
+}
+.gcal-logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #4285F4, #34A853, #FBBC05, #EA4335);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 900;
+  font-size: 18px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+  flex-shrink: 0;
+}
+.cal-quick-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all .16s ease;
+}
+.cal-quick-pill:hover {
+  background: var(--surface-hover);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.cal-quick-pill.secondary {
+  background: var(--panel2);
+}
+.modal-cal-quick-strip {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ============================================================
+   SMART MANAGE NAVBAR SYSTEM
+   ============================================================ */
+
+/* Top Navbar Course Switcher & Manager Pill */
+.nav-manage-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.nav-manage-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--text);
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .18s cubic-bezier(.16, 1, .3, 1);
+  white-space: nowrap;
+}
+.nav-manage-btn:hover {
+  background: var(--surface-hover);
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-1px);
+}
+.nav-manage-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent-glow);
+}
+.nav-manage-badge {
+  font-size: 9px;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: var(--accent-subtle);
+  color: var(--accent);
+  border: 1px solid var(--accent-glow);
+}
+
+/* Nav Manage Popover Menu */
+.nav-manage-popover {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  width: 360px;
+  max-width: 90vw;
+  background: var(--surface);
+  border: 1px solid var(--line-strong, var(--line));
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg, 0 10px 30px rgba(0,0,0,0.45));
+  z-index: 120;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: nmpSlide .18s ease-out;
+}
+@keyframes nmpSlide {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.nmp-header {
+  padding: 14px 16px 10px;
+  background: var(--panel2);
+  border-bottom: 1px solid var(--line);
+}
+.nmp-header strong {
+  font-size: 13px;
+  color: var(--text);
+}
+.nmp-count-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--accent-subtle);
+  padding: 2px 7px;
+  border-radius: 12px;
+}
+.nmp-search-wrap {
+  margin-top: 10px;
+}
+.nmp-search-wrap input {
+  width: 100%;
+  padding: 7px 12px;
+  font-size: 12px;
+  border-radius: 6px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--text);
+}
+.nmp-search-wrap input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+.nmp-course-list {
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.nmp-course-item {
+  display: flex;
+  flex-direction: column;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--panel2);
+  border: 1px solid transparent;
+  transition: all .16s ease;
+  cursor: pointer;
+}
+.nmp-course-item:hover {
+  border-color: var(--accent);
+  background: var(--surface-hover);
+  transform: translateY(-1px);
+}
+.nmp-course-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.nmp-course-title-row strong {
+  font-size: 12px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nmp-course-cat {
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--accent-subtle);
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.nmp-course-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.nmp-progress-track {
+  width: 100%;
+  height: 4px;
+  background: var(--line);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+.nmp-progress-bar {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+}
+.nmp-course-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+.nmp-action-mini {
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text);
+  cursor: pointer;
+  transition: all .14s ease;
+}
+.nmp-action-mini:hover {
+  background: var(--accent);
+  color: var(--accent-text, #fff);
+  border-color: var(--accent);
+}
+.nmp-footer {
+  padding: 10px 12px;
+  background: var(--panel2);
+  border-top: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.nmp-action-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all .16s ease;
+}
+.nmp-action-btn:hover {
+  background: var(--accent);
+  color: var(--accent-text, #fff);
+  border-color: var(--accent);
+}
+
+/* Dedicated Smart Manage Navbar in Course Management Page */
+.smart-manage-navbar {
+  position: sticky;
+  top: 72px;
+  z-index: 30;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.1);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: all .2s ease;
+}
+[data-mode="light"] .smart-manage-navbar {
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+}
+.smn-header-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.smn-tabs-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.smn-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .16s ease;
+}
+.smn-tab:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+  border-color: var(--accent);
+}
+.smn-tab.active {
+  background: var(--accent);
+  color: var(--accent-text, #fff);
+  border-color: var(--accent);
+  box-shadow: 0 2px 8px var(--accent-glow);
+}
+.smn-tools-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.smn-action-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  border-radius: 20px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .16s ease;
+}
+.smn-action-pill:hover {
+  background: var(--surface-hover);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.smn-view-switcher {
+  display: inline-flex;
+  align-items: center;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 2px;
+  gap: 2px;
+}
+.smn-view-btn {
+  padding: 5px 9px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .14s ease;
+}
+.smn-view-btn:hover {
+  color: var(--text);
+}
+.smn-view-btn.active {
+  background: var(--accent);
+  color: var(--accent-text, #fff);
+  box-shadow: 0 1px 4px var(--accent-glow);
+}
+
+/* Category Pills Carousel */
+.smn-filter-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.smn-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 220px;
+  flex: 1;
+}
+.smn-search-wrap .search-icon {
+  position: absolute;
+  left: 10px;
+  font-size: 12px;
+  color: var(--muted);
+  pointer-events: none;
+}
+.smn-search-wrap input {
+  width: 100%;
+  padding: 8px 12px 8px 30px;
+  font-size: 12px;
+  border-radius: 20px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--text);
+  transition: border-color .16s ease;
+}
+.smn-search-wrap input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+.smn-categories-strip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 2px 0;
+  max-width: 100%;
+  scrollbar-width: thin;
+}
+.smn-cat-pill {
+  padding: 5px 12px;
+  border-radius: 16px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all .15s ease;
+}
+.smn-cat-pill:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+  border-color: var(--accent);
+}
+.smn-cat-pill.active {
+  background: var(--accent-subtle);
+  color: var(--accent);
+  border-color: var(--accent);
+  font-weight: 800;
+}
+.smn-filter-dropdowns {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.smn-filter-dropdowns select {
+  padding: 6px 10px;
+  font-size: 11px;
+  border-radius: 6px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--text);
+}
+.smn-summary-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+  font-size: 11px;
+  color: var(--muted);
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Collapsible Creator Drawer */
+.smn-creator-drawer {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 20px;
+  animation: drawerSlide .2s cubic-bezier(.16, 1, .3, 1);
+}
+@keyframes drawerSlide {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Course View Modes: Accordion, Compact Cards, Dense List */
+.management-courses.view-compact {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+.management-courses.view-compact .management-course-body {
+  display: none !important;
+}
+.management-courses.view-compact .management-course {
+  margin-bottom: 0;
+  height: 100%;
+}
+.management-courses.view-compact .management-course-head {
+  height: 100%;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+}
+.management-courses.view-compact .mc-chevron {
+  display: none;
+}
+.management-courses.view-compact .course-actions {
+  flex-wrap: wrap;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+.management-courses.view-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.management-courses.view-list .management-course-body {
+  display: none !important;
+}
+.management-courses.view-list .management-course {
+  margin-bottom: 0;
+  border-radius: 8px;
+}
+.management-courses.view-list .management-course-head {
+  padding: 10px 14px;
+}
+.management-courses.view-list .mc-chevron {
+  display: none;
+}
+
+/* Navbar Customizer Grid in Settings */
+.nav-pref-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+.nav-pref-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  cursor: pointer;
+  transition: all .16s ease;
+}
+.nav-pref-item:hover {
+  background: var(--surface-hover);
+  border-color: var(--accent);
+}
+.nav-pref-item input[type="checkbox"] {
+  accent-color: var(--accent);
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  cursor: pointer;
+}
+.nav-pref-item strong {
+  display: block;
+  font-size: 12px;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+.nav-pref-item small {
+  display: block;
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+/* ============================================================
    RESPONSIVE DESIGN BREAKPOINTS
    ============================================================ */
 @media(max-width: 1060px) {
@@ -2977,6 +3760,22 @@ textarea { resize: vertical; }
   .analytics-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .analytics-panel, .sessions-panel { padding: 15px; }
   .weekly-chart { gap: 6px; }
+  .calendar-grid-layout { grid-template-columns: 1fr; }
+  .cal-form-row { grid-template-columns: 1fr; }
+  .dayflows-frame-wrapper { height: 68vh; min-height: 480px; }
+  .cal-nav-text { display: none; }
+  .nav-calendar-btn { padding: 7px 10px; }
+  .nav-manage-label { display: none; }
+  .nav-manage-btn { padding: 6px 9px; }
+  .smart-manage-navbar { top: 64px; padding: 10px 12px; }
+  .smn-header-strip { flex-direction: column; align-items: stretch; }
+  .smn-tabs-group { width: 100%; justify-content: space-between; }
+  .smn-tools-group { width: 100%; justify-content: space-between; }
+  .smn-filter-strip { flex-direction: column; align-items: stretch; }
+  .smn-search-wrap { width: 100%; }
+  .smn-filter-dropdowns { width: 100%; }
+  .smn-filter-dropdowns select { flex: 1; }
+  .nav-pref-grid { grid-template-columns: 1fr; }
 }
 
 @media(max-width: 390px) {
